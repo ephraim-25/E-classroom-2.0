@@ -8,13 +8,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, BookOpen, DollarSign, Shield, TrendingUp, AlertTriangle, Search } from "lucide-react"
+import {
+  Users,
+  BookOpen,
+  DollarSign,
+  Shield,
+  TrendingUp,
+  AlertTriangle,
+  Search,
+  MoreHorizontal,
+  Eye,
+  Ban,
+  CheckCircle,
+  XCircle,
+} from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export function AdminDashboard() {
   const { user, logout } = useAuth()
   const [activeTab, setActiveTab] = useState("overview")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedUserAction, setSelectedUserAction] = useState<string | null>(null)
 
   if (!user) return null
 
@@ -196,7 +209,6 @@ export function AdminDashboard() {
 
   const handleUserAction = (userId: string, action: string) => {
     console.log(`Action ${action} on user ${userId}`)
-    setSelectedUserAction(null)
   }
 
   const handleCourseAction = (courseId: string, action: string) => {
@@ -320,11 +332,17 @@ export function AdminDashboard() {
               <CardContent className="space-y-4">
                 {recentActivity.map((activity) => (
                   <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <div className={`w-2 h-2 rounded-full ${
-                      activity.type === 'content_reported' ? 'bg-red-600' :
-                      activity.type === 'payment_processed' ? 'bg-green-600' :
-                      activity.type === 'course_submission' ? 'bg-yellow-600' : 'bg-blue-600'
-                    }`}></div>
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        activity.type === "content_reported"
+                          ? "bg-red-600"
+                          : activity.type === "payment_processed"
+                            ? "bg-green-600"
+                            : activity.type === "course_submission"
+                              ? "bg-yellow-600"
+                              : "bg-blue-600"
+                      }`}
+                    ></div>
                     <div className="flex-1">
                       <p className="text-sm font-medium">{activity.message}</p>
                       <p className="text-xs text-gray-600">
@@ -394,8 +412,290 @@ export function AdminDashboard() {
                               user.type === "instructor"
                                 ? "bg-purple-100 text-purple-800 hover:bg-purple-200"
                                 : user.type === "admin"
-                                ? "bg-red-100 text-red-800 hover:bg-red-200"
-                                : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                  ? "bg-red-100 text-red-800 hover:bg-red-200"
+                                  : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                             }
                           >
-                            {user.type === "instructor" ? "Formateur\
+                            {user.type === "instructor" ? "Formateur" : user.type === "admin" ? "Admin" : "Étudiant"}
+                          </Badge>
+                          <Badge
+                            className={
+                              user.status === "active"
+                                ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                : "bg-red-100 text-red-800 hover:bg-red-200"
+                            }
+                          >
+                            {user.status === "active" ? "Actif" : "Suspendu"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">{user.email}</p>
+                        <p className="text-xs text-gray-500">
+                          Inscrit le {new Date(user.joinDate).toLocaleDateString("fr-FR")} • Dernière activité:{" "}
+                          {new Date(user.lastActive).toLocaleDateString("fr-FR")}
+                        </p>
+                        {user.type === "student" && (
+                          <p className="text-xs text-blue-600">{user.coursesEnrolled} cours inscrits</p>
+                        )}
+                        {user.type === "instructor" && (
+                          <p className="text-xs text-purple-600">
+                            {user.coursesCreated} cours créés • {user.totalStudents} étudiants
+                          </p>
+                        )}
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleUserAction(user.id, "view")}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Voir le profil
+                          </DropdownMenuItem>
+                          {user.status === "active" ? (
+                            <DropdownMenuItem onClick={() => handleUserAction(user.id, "suspend")}>
+                              <Ban className="w-4 h-4 mr-2" />
+                              Suspendre
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => handleUserAction(user.id, "activate")}>
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Réactiver
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="courses" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-blue-900">Gestion des Cours</CardTitle>
+                <CardDescription>{systemStats.totalCourses} cours au total</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {courses.map((course) => (
+                    <div key={course.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h3 className="font-semibold text-blue-900">{course.title}</h3>
+                          <Badge
+                            className={
+                              course.status === "published"
+                                ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                : course.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                                  : "bg-red-100 text-red-800 hover:bg-red-200"
+                            }
+                          >
+                            {course.status === "published"
+                              ? "Publié"
+                              : course.status === "pending"
+                                ? "En attente"
+                                : "Signalé"}
+                          </Badge>
+                          {course.reports > 0 && (
+                            <Badge className="bg-red-100 text-red-800 hover:bg-red-200">
+                              {course.reports} signalement(s)
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Par {course.instructor} • {course.category}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Créé le {new Date(course.createdDate).toLocaleDateString("fr-FR")} •{course.students}{" "}
+                          étudiants • ${course.revenue} revenus
+                        </p>
+                        {course.rating > 0 && <p className="text-xs text-yellow-600">⭐ {course.rating}/5</p>}
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleCourseAction(course.id, "view")}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Voir le cours
+                          </DropdownMenuItem>
+                          {course.status === "pending" && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleCourseAction(course.id, "approve")}>
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Approuver
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleCourseAction(course.id, "reject")}>
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Rejeter
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {course.status === "published" && (
+                            <DropdownMenuItem onClick={() => handleCourseAction(course.id, "suspend")}>
+                              <Ban className="w-4 h-4 mr-2" />
+                              Suspendre
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="payments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-blue-900">Gestion des Paiements</CardTitle>
+                <CardDescription>Historique et suivi des transactions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {payments.map((payment) => (
+                    <div
+                      key={payment.id}
+                      className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h3 className="font-semibold text-blue-900">${payment.amount}</h3>
+                          <Badge
+                            className={
+                              payment.status === "completed"
+                                ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                : payment.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                                  : "bg-red-100 text-red-800 hover:bg-red-200"
+                            }
+                          >
+                            {payment.status === "completed"
+                              ? "Complété"
+                              : payment.status === "pending"
+                                ? "En attente"
+                                : "Échoué"}
+                          </Badge>
+                          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">{payment.method}</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {payment.student} • {payment.course}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(payment.date).toLocaleDateString("fr-FR")} • ID: {payment.transactionId}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => console.log("View payment", payment.id)}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="certificates" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-blue-900">Gestion des Certificats</CardTitle>
+                <CardDescription>Certificats émis et vérifications</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {certificates.map((certificate) => (
+                    <div
+                      key={certificate.id}
+                      className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h3 className="font-semibold text-blue-900">{certificate.id}</h3>
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
+                            {certificate.status === "valid" ? "Valide" : "Invalide"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {certificate.student} • {certificate.course}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Émis le {new Date(certificate.issueDate).toLocaleDateString("fr-FR")} par{" "}
+                          {certificate.instructor}
+                        </p>
+                        <p className="text-xs text-blue-600">Code: {certificate.verificationCode}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(`/verify/${certificate.id}`, "_blank")}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-blue-900">Rapports Financiers</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between">
+                      <span>Revenus totaux</span>
+                      <span className="font-semibold">${systemStats.totalRevenue.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Revenus ce mois</span>
+                      <span className="font-semibold text-green-600">+$18,450</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Commissions</span>
+                      <span className="font-semibold">$12,534</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-blue-900">Statistiques d'Engagement</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between">
+                      <span>Taux de complétion</span>
+                      <span className="font-semibold">78%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Satisfaction moyenne</span>
+                      <span className="font-semibold">4.6/5</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Utilisateurs actifs</span>
+                      <span className="font-semibold">8,234</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  )
+}
