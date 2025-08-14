@@ -30,16 +30,9 @@ const mockUsers = [
   },
 ]
 
-const JWT_SECRET = process.env.JWT_SECRET || "e-classroom-default-secret-key-2024"
-
 export async function POST(request: NextRequest) {
   try {
     const { identifier, password, method } = await request.json()
-
-    // Validate input
-    if (!identifier || !password || !method) {
-      return NextResponse.json({ error: "Données manquantes" }, { status: 400 })
-    }
 
     // Find user by email or phone
     const user = mockUsers.find((u) => (method === "email" ? u.email === identifier : u.phone === identifier))
@@ -54,24 +47,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 })
     }
 
-    let token: string
-    try {
-      token = jwt.sign(
-        {
-          userId: user.id,
-          userType: user.userType,
-          email: user.email,
-        },
-        JWT_SECRET,
-        {
-          expiresIn: "7d",
-          algorithm: "HS256",
-        },
-      )
-    } catch (jwtError) {
-      console.error("JWT generation error:", jwtError)
-      return NextResponse.json({ error: "Erreur de génération du token" }, { status: 500 })
-    }
+    // Generate JWT token
+    const token = jwt.sign({ userId: user.id, userType: user.userType }, process.env.JWT_SECRET || "your-secret-key", {
+      expiresIn: "7d",
+    })
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
