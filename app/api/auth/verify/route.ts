@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import jwt from "jsonwebtoken"
 
 // Mock database - replace with actual database
 const mockUsers = [
@@ -16,6 +15,18 @@ const mockUsers = [
   },
 ]
 
+function parseSimpleToken(token: string): { userId: string; userType: string } | null {
+  try {
+    const parts = token.split("_")
+    if (parts.length >= 2) {
+      return { userId: parts[0], userType: parts[1] }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { token } = await request.json()
@@ -24,10 +35,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Token manquant" }, { status: 401 })
     }
 
-    // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as {
-      userId: string
-      userType: string
+    const decoded = parseSimpleToken(token)
+    if (!decoded) {
+      return NextResponse.json({ error: "Token invalide ou expiré" }, { status: 401 })
     }
 
     // Find user
@@ -39,6 +49,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ user })
   } catch (error) {
     console.error("Token verification error:", error)
-    return NextResponse.json({ error: "Token invalide" }, { status: 401 })
+    return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 })
   }
 }

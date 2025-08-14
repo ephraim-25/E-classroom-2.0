@@ -25,6 +25,9 @@ export function Header() {
             <Link href="/courses" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
               Cours
             </Link>
+            <Link href="/library" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+              Bibliothèque
+            </Link>
             <a href="#formations" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
               Formations
             </a>
@@ -60,6 +63,9 @@ export function Header() {
             <div className="flex flex-col space-y-4">
               <Link href="/courses" className="text-gray-700 hover:text-blue-600 font-medium">
                 Cours
+              </Link>
+              <Link href="/library" className="text-gray-700 hover:text-blue-600 font-medium">
+                Bibliothèque
               </Link>
               <a href="#formations" className="text-gray-700 hover:text-blue-600 font-medium">
                 Formations

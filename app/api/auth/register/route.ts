@@ -1,6 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
-import jwt from "jsonwebtoken"
-import bcrypt from "bcryptjs"
+
+function hashPassword(password: string): string {
+  // Simple hash simulation - replace with proper hashing in production
+  return `hashed_${password}_${Date.now()}`
+}
+
+function generateSimpleToken(userId: string, userType: string): string {
+  const timestamp = Date.now()
+  const randomString = Math.random().toString(36).substring(2, 15)
+  return `${userId}_${userType}_${timestamp}_${randomString}`
+}
 
 // Mock database - replace with actual database
 const mockUsers = [
@@ -10,7 +19,7 @@ const mockUsers = [
     lastName: "Dupont",
     email: "jean@example.com",
     phone: "+243123456789",
-    password: "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    password: "hashed_password_1234567890",
     userType: "student",
     isVerified: true,
     createdAt: "2024-01-01T00:00:00.000Z",
@@ -28,8 +37,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Un utilisateur avec cet email ou ce numéro existe déjà" }, { status: 409 })
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = hashPassword(password)
 
     // Create new user
     const newUser = {
@@ -48,12 +56,7 @@ export async function POST(request: NextRequest) {
     // Add to mock database
     mockUsers.push(newUser)
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: newUser.id, userType: newUser.userType },
-      process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "7d" },
-    )
+    const token = generateSimpleToken(newUser.id, newUser.userType)
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = newUser

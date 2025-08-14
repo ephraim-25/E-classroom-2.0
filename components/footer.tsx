@@ -1,4 +1,5 @@
 import { BookOpen, Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from "lucide-react"
+import Link from "next/link"
 
 export function Footer() {
   return (
@@ -30,24 +31,24 @@ export function Footer() {
             <h3 className="text-lg font-semibold">Liens rapides</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#courses" className="text-blue-200 hover:text-white transition-colors">
+                <Link href="/courses" className="text-blue-200 hover:text-white transition-colors">
                   Cours
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#formations" className="text-blue-200 hover:text-white transition-colors">
+                <Link href="/courses?category=formations" className="text-blue-200 hover:text-white transition-colors">
                   Formations
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#masterclass" className="text-blue-200 hover:text-white transition-colors">
+                <Link href="/courses?category=masterclass" className="text-blue-200 hover:text-white transition-colors">
                   Masterclass
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#certificates" className="text-blue-200 hover:text-white transition-colors">
-                  Certificats
-                </a>
+                <Link href="/forum" className="text-blue-200 hover:text-white transition-colors">
+                  Forum
+                </Link>
               </li>
             </ul>
           </div>
@@ -57,24 +58,29 @@ export function Footer() {
             <h3 className="text-lg font-semibold">Support</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="text-blue-200 hover:text-white transition-colors">
-                  Centre d'aide
-                </a>
+                <Link href="/about" className="text-blue-200 hover:text-white transition-colors">
+                  À propos
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-blue-200 hover:text-white transition-colors">
-                  FAQ
-                </a>
+                <Link href="/contact" className="text-blue-200 hover:text-white transition-colors">
+                  FAQ & Support
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-blue-200 hover:text-white transition-colors">
+                <Link href="/contact" className="text-blue-200 hover:text-white transition-colors">
                   Nous contacter
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-blue-200 hover:text-white transition-colors">
+                <Link href="/privacy" className="text-blue-200 hover:text-white transition-colors">
                   Politique de confidentialité
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="text-blue-200 hover:text-white transition-colors">
+                  Conditions d'utilisation
+                </Link>
               </li>
             </ul>
           </div>

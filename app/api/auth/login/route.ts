@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import jwt from "jsonwebtoken"
 import bcrypt from "bcryptjs"
 
 // Mock database - replace with actual database
@@ -30,9 +29,20 @@ const mockUsers = [
   },
 ]
 
+function generateSimpleToken(userId: string, userType: string): string {
+  const timestamp = Date.now()
+  const randomString = Math.random().toString(36).substring(2, 15)
+  return `${userId}_${userType}_${timestamp}_${randomString}`
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { identifier, password, method } = await request.json()
+
+    // Validate input
+    if (!identifier || !password || !method) {
+      return NextResponse.json({ error: "Données manquantes" }, { status: 400 })
+    }
 
     // Find user by email or phone
     const user = mockUsers.find((u) => (method === "email" ? u.email === identifier : u.phone === identifier))
@@ -47,10 +57,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 })
     }
 
-    // Generate JWT token
-    const token = jwt.sign({ userId: user.id, userType: user.userType }, process.env.JWT_SECRET || "your-secret-key", {
-      expiresIn: "7d",
-    })
+    const token = generateSimpleToken(user.id, user.userType)
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
