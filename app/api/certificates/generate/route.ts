@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import jwt from "jsonwebtoken"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,11 +10,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Token d'authentification requis" }, { status: 401 })
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as {
-      userId: string
-      userType: string
+    if (!token.startsWith("token_")) {
+      return NextResponse.json({ error: "Token invalide" }, { status: 401 })
     }
+
+    const [, tokenUserId, userType] = token.split("_")
 
     // Validate required fields
     if (!userId || !courseId || !studentName || !courseName || !instructorName) {

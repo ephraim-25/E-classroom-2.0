@@ -1,3 +1,5 @@
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import { BookDetail } from "@/components/library/book-detail"
 
 interface BookPageProps {
@@ -9,12 +11,16 @@ interface BookPageProps {
 export default function BookPage({ params }: BookPageProps) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <BookDetail bookId={params.id} />
+      <Header />
+      <main className="py-8">
+        <BookDetail bookId={params.id} />
+      </main>
+      <Footer />
     </div>
   )
 }
 
 export const metadata = {
-  title: "Détail du livre - E-Classroom",
-  description: "Découvrez les détails de ce livre et achetez-le pour enrichir vos connaissances.",
+  title: "Livre - E-Classroom",
+  description: "Détails du livre et informations sur l'auteur. Achetez et téléchargez instantanément.",
 }

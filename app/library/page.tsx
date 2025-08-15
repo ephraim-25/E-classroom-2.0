@@ -1,9 +1,15 @@
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import { LibraryCatalog } from "@/components/library/library-catalog"
 
 export default function LibraryPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <LibraryCatalog />
+      <Header />
+      <main className="py-8">
+        <LibraryCatalog />
+      </main>
+      <Footer />
     </div>
   )
 }
@@ -11,5 +17,6 @@ export default function LibraryPage() {
 export const metadata = {
   title: "Bibliothèque - E-Classroom",
   description:
-    "Découvrez notre collection de livres écrits par nos formateurs experts. Achetez et téléchargez des livres sur l'entrepreneuriat, le leadership, la technologie et plus encore.",
+    "Découvrez et achetez des livres écrits par nos formateurs experts. Une collection unique de ressources éducatives pour approfondir vos connaissances.",
+  keywords: "livres, bibliothèque, formation, éducation, RDC, Congo, apprentissage, formateurs",
 }

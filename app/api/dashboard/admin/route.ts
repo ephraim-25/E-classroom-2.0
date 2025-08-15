@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import jwt from "jsonwebtoken"
 
 // Mock admin data - replace with actual database
 const mockAdminData = {
@@ -76,13 +75,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Token d'authentification requis" }, { status: 401 })
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as {
-      userId: string
-      userType: string
+    // Simple token verification (replace JWT)
+    if (!token.startsWith("token_")) {
+      return NextResponse.json({ error: "Token invalide" }, { status: 401 })
     }
 
-    if (decoded.userType !== "admin") {
+    const [, userId, userType] = token.split("_")
+
+    if (userType !== "admin") {
       return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
     }
 

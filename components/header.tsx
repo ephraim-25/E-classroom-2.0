@@ -4,9 +4,12 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Menu, X, BookOpen } from "lucide-react"
 import Link from "next/link"
+import { LanguageSelector } from "@/components/ui/language-selector"
+import { useLanguage } from "@/contexts/language-context"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { t } = useLanguage()
 
   return (
     <header className="bg-white shadow-sm border-b border-blue-100">
@@ -23,31 +26,32 @@ export function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <Link href="/courses" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-              Cours
+              {t("nav.courses")}
             </Link>
             <Link href="/library" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-              Bibliothèque
+              {t("nav.library")}
             </Link>
             <a href="#formations" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-              Formations
+              {t("nav.formations")}
             </a>
             <a href="#masterclass" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-              Masterclass
+              {t("nav.masterclass")}
             </a>
             <a href="#partners" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-              Partenaires
+              {t("nav.partners")}
             </a>
           </nav>
 
-          {/* Desktop Auth Buttons */}
+          {/* Desktop Auth Buttons & Language Selector */}
           <div className="hidden md:flex items-center space-x-4">
+            <LanguageSelector />
             <Link href="/auth/login">
               <Button variant="ghost" className="text-blue-600 hover:text-blue-700">
-                Connexion
+                {t("nav.login")}
               </Button>
             </Link>
             <Link href="/auth/register">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">S'inscrire</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">{t("nav.register")}</Button>
             </Link>
           </div>
 
@@ -62,28 +66,34 @@ export function Header() {
           <div className="md:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col space-y-4">
               <Link href="/courses" className="text-gray-700 hover:text-blue-600 font-medium">
-                Cours
+                {t("nav.courses")}
               </Link>
               <Link href="/library" className="text-gray-700 hover:text-blue-600 font-medium">
-                Bibliothèque
+                {t("nav.library")}
               </Link>
               <a href="#formations" className="text-gray-700 hover:text-blue-600 font-medium">
-                Formations
+                {t("nav.formations")}
               </a>
               <a href="#masterclass" className="text-gray-700 hover:text-blue-600 font-medium">
-                Masterclass
+                {t("nav.masterclass")}
               </a>
               <a href="#partners" className="text-gray-700 hover:text-blue-600 font-medium">
-                Partenaires
+                {t("nav.partners")}
               </a>
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Langue:</span>
+                  <LanguageSelector />
+                </div>
                 <Link href="/auth/login">
                   <Button variant="ghost" className="text-blue-600 hover:text-blue-700 justify-start w-full">
-                    Connexion
+                    {t("nav.login")}
                   </Button>
                 </Link>
                 <Link href="/auth/register">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white justify-start w-full">S'inscrire</Button>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white justify-start w-full">
+                    {t("nav.register")}
+                  </Button>
                 </Link>
               </div>
             </div>

@@ -4,184 +4,201 @@ import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
-import { CreditCard, Smartphone, Shield, ArrowLeft } from "lucide-react"
+import { ArrowLeft, CheckCircle } from "lucide-react"
+import { PaymentMethodSelector } from "@/components/payments/payment-method-selector"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function CheckoutPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user } = useAuth()
   const courseId = searchParams.get("courseId")
-  const [paymentMethod, setPaymentMethod] = useState("card")
+  const [paymentMethod, setPaymentMethod] = useState("")
+  const [paymentData, setPaymentData] = useState<any>({})
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   // Mock course data - in real app, fetch from API
   const course = {
     id: courseId,
     title: "Introduction au Marketing Digital",
-    price: 49.99,
+    price: 79,
     instructor: "Marie Dubois",
     image: "/placeholder.svg?height=200&width=300",
+    features: [
+      "8h 30min de contenu vidéo",
+      "Ressources téléchargeables",
+      "Accès à vie",
+      "Certificat de fin de formation",
+      "Support communautaire",
+    ],
   }
 
   const handlePayment = async () => {
+    if (!paymentMethod) {
+      setError("Veuillez sélectionner une méthode de paiement")
+      return
+    }
+
+    // Validate payment data
+    if (paymentMethod === "card") {
+      if (!paymentData.cardNumber || !paymentData.expiry || !paymentData.cvv || !paymentData.cardName) {
+        setError("Veuillez remplir tous les champs de la carte")
+        return
+      }
+    } else if (["mpesa", "airtel", "orange"].includes(paymentMethod)) {
+      if (!paymentData.phoneNumber) {
+        setError("Veuillez entrer votre numéro de téléphone")
+        return
+      }
+    }
+
     setLoading(true)
-    // Simulate payment processing
-    setTimeout(() => {
-      router.push(`/payment/success?courseId=${courseId}`)
-    }, 2000)
+    setError("")
+
+    try {
+      const response = await fetch("/api/payments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          courseId,
+          paymentMethod,
+          amount: course.price,
+          userDetails: {
+            userId: user?.id,
+            email: user?.email,
+            firstName: user?.firstName,
+            lastName: user?.lastName,
+          },
+          phoneNumber: paymentData.phoneNumber,
+          cardDetails:
+            paymentMethod === "card"
+              ? {
+                  number: paymentData.cardNumber,
+                  expiry: paymentData.expiry,
+                  cvv: paymentData.cvv,
+                  name: paymentData.cardName,
+                }
+              : undefined,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        if (result.redirectUrl) {
+          router.push(result.redirectUrl)
+        } else {
+          // For mobile money, show instructions
+          router.push(`/payment/pending?transactionId=${result.transactionId}&method=${paymentMethod}`)
+        }
+      } else {
+        setError(result.error || "Erreur lors du traitement du paiement")
+      }
+    } catch (error) {
+      setError("Erreur de connexion. Veuillez réessayer.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-6xl mx-auto px-4">
         <Button variant="ghost" onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
+          Retour au cours
         </Button>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Order Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Résumé de la commande</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-4">
-                <img
-                  src={course.image || "/placeholder.svg"}
-                  alt={course.title}
-                  className="w-20 h-20 rounded-lg object-cover"
-                />
-                <div className="flex-1">
-                  <h3 className="font-semibold">{course.title}</h3>
-                  <p className="text-sm text-gray-600">Par {course.instructor}</p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Prix du cours</span>
-                  <span>${course.price}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>TVA (20%)</span>
-                  <span>${(course.price * 0.2).toFixed(2)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-semibold text-lg">
-                  <span>Total</span>
-                  <span>${(course.price * 1.2).toFixed(2)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+        <div className="grid lg:grid-cols-3 gap-8">
           {/* Payment Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Méthode de paiement</CardTitle>
-              <CardDescription>Choisissez votre méthode de paiement préférée</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                  <RadioGroupItem value="card" id="card" />
-                  <Label htmlFor="card" className="flex items-center gap-2 cursor-pointer">
-                    <CreditCard className="w-5 h-5" />
-                    Carte bancaire
-                  </Label>
-                </div>
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl text-blue-900">Finaliser votre achat</CardTitle>
+                <CardDescription>
+                  Choisissez votre méthode de paiement préférée pour accéder immédiatement au cours
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PaymentMethodSelector
+                  selectedMethod={paymentMethod}
+                  onMethodChange={setPaymentMethod}
+                  onPaymentDataChange={setPaymentData}
+                  amount={course.price}
+                />
 
-                <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                  <RadioGroupItem value="mpesa" id="mpesa" />
-                  <Label htmlFor="mpesa" className="flex items-center gap-2 cursor-pointer">
-                    <Smartphone className="w-5 h-5" />
-                    M-Pesa
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                  <RadioGroupItem value="airtel" id="airtel" />
-                  <Label htmlFor="airtel" className="flex items-center gap-2 cursor-pointer">
-                    <Smartphone className="w-5 h-5" />
-                    Airtel Money
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                  <RadioGroupItem value="orange" id="orange" />
-                  <Label htmlFor="orange" className="flex items-center gap-2 cursor-pointer">
-                    <Smartphone className="w-5 h-5" />
-                    Orange Money
-                  </Label>
-                </div>
-              </RadioGroup>
-
-              {/* Payment Form Fields */}
-              {paymentMethod === "card" && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="cardNumber">Numéro de carte</Label>
-                    <Input id="cardNumber" placeholder="1234 5678 9012 3456" className="mt-1" />
+                {error && (
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-800 text-sm">{error}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="expiry">Date d'expiration</Label>
-                      <Input id="expiry" placeholder="MM/YY" className="mt-1" />
+                )}
+
+                <div className="mt-6">
+                  <Button
+                    onClick={handlePayment}
+                    disabled={loading || !paymentMethod}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    size="lg"
+                  >
+                    {loading ? "Traitement en cours..." : `Payer $${course.price}`}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Order Summary */}
+          <div>
+            <Card className="sticky top-8">
+              <CardHeader>
+                <CardTitle className="text-blue-900">Résumé de la commande</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-4">
+                  <img
+                    src={course.image || "/placeholder.svg"}
+                    alt={course.title}
+                    className="w-20 h-20 rounded-lg object-cover"
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-blue-900">{course.title}</h3>
+                    <p className="text-sm text-gray-600">Par {course.instructor}</p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-blue-900">Ce cours inclut :</h4>
+                  {course.features.map((feature, index) => (
+                    <div key={index} className="flex items-center space-x-2 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>{feature}</span>
                     </div>
-                    <div>
-                      <Label htmlFor="cvv">CVV</Label>
-                      <Input id="cvv" placeholder="123" className="mt-1" />
-                    </div>
+                  ))}
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Prix du cours</span>
+                    <span>${course.price}</span>
                   </div>
-                  <div>
-                    <Label htmlFor="cardName">Nom sur la carte</Label>
-                    <Input id="cardName" placeholder="John Doe" className="mt-1" />
+                  <div className="flex justify-between font-semibold text-lg">
+                    <span>Total</span>
+                    <span>${course.price}</span>
                   </div>
                 </div>
-              )}
 
-              {(paymentMethod === "mpesa" || paymentMethod === "airtel" || paymentMethod === "orange") && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="phoneNumber">Numéro de téléphone</Label>
-                    <Input id="phoneNumber" placeholder="+243 XXX XXX XXX" className="mt-1" />
-                  </div>
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
-                      <div className="text-sm">
-                        <p className="font-medium text-blue-900">Instructions de paiement</p>
-                        <p className="text-blue-700 mt-1">
-                          Vous recevrez un SMS avec les instructions pour finaliser le paiement via{" "}
-                          {paymentMethod === "mpesa"
-                            ? "M-Pesa"
-                            : paymentMethod === "airtel"
-                              ? "Airtel Money"
-                              : "Orange Money"}
-                          .
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <Button onClick={handlePayment} disabled={loading} className="w-full" size="lg">
-                {loading ? "Traitement en cours..." : `Payer $${(course.price * 1.2).toFixed(2)}`}
-              </Button>
-
-              <div className="text-center text-sm text-gray-600">
-                <Shield className="w-4 h-4 inline mr-1" />
-                Paiement sécurisé SSL 256-bit
-              </div>
-            </CardContent>
-          </Card>
+                <div className="text-xs text-gray-500 text-center">Garantie de remboursement de 30 jours</div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
