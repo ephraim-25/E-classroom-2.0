@@ -1,14 +1,15 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Eye, EyeOff, Mail, Phone, Chrome } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Eye, EyeOff, Mail, Phone, Chrome, AlertCircle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { supabase } from "@/lib/supabase" // Declare the supabase variable
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
@@ -19,33 +20,61 @@ export function LoginForm() {
     password: "",
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
+
+    if (!formData.password || formData.password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caractères")
+      setIsLoading(false)
+      return
+    }
+
+    const identifier = loginMethod === "email" ? formData.email : formData.phone
+    if (!identifier) {
+      setError(`Veuillez saisir votre ${loginMethod === "email" ? "email" : "numéro de téléphone"}`)
+      setIsLoading(false)
+      return
+    }
 
     try {
       await login({
-        identifier: loginMethod === "email" ? formData.email : formData.phone,
+        identifier,
         password: formData.password,
         method: loginMethod,
       })
-    } catch (error) {
-      console.error("Login error:", error)
+    } catch (error: any) {
+      setError(error.message || "Erreur de connexion")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleSocialLogin = (provider: "google" | "facebook") => {
-    // Implement social login
-    console.log(`Login with ${provider}`)
+    if (provider === "google") {
+      supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+    }
   }
 
   return (
     <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Login Method Toggle */}
       <div className="flex bg-gray-100 rounded-lg p-1">
         <button
@@ -101,6 +130,7 @@ export function LoginForm() {
               value={formData.password}
               onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
               required
+              minLength={6}
               className="border-blue-200 focus:border-blue-500 pr-10"
             />
             <button

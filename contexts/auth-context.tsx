@@ -1,34 +1,28 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-
-export interface User {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  userType: "student" | "instructor" | "admin"
-  avatar?: string
-  isVerified: boolean
-  createdAt: string
-  updatedAt: string
-}
+import {
+  supabase,
+  type AuthUser,
+  signUpWithEmail,
+  signInWithEmail,
+  signInWithPhone,
+  getCurrentUser,
+} from "@/lib/supabase/auth"
 
 interface AuthContextType {
-  user: User | null
+  user: AuthUser | null
   isLoading: boolean
   login: (credentials: LoginCredentials) => Promise<void>
   register: (userData: RegisterData) => Promise<void>
-  logout: () => void
-  updateProfile: (data: Partial<User>) => Promise<void>
+  logout: () => Promise<void>
+  updateProfile: (data: Partial<AuthUser>) => Promise<void>
 }
 
 interface LoginCredentials {
-  identifier: string // email or phone
+  identifier: string
   password: string
   method: "email" | "phone"
 }
@@ -45,76 +39,100 @@ interface RegisterData {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    // Check for existing session on mount
-    checkAuthStatus()
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const userData = await getCurrentUser()
+        setUser(userData)
+      } else {
+        setUser(null)
+      }
+      setIsLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  const checkAuthStatus = async () => {
+  const login = async (credentials: LoginCredentials) => {
     try {
-      const token = localStorage.getItem("auth_token")
-      if (token) {
-        // Validate token and get user data
-        const userData = await validateToken(token)
-        setUser(userData)
+      setIsLoading(true)
+
+      let authData
+      if (credentials.method === "email") {
+        authData = await signInWithEmail(credentials.identifier, credentials.password)
+      } else {
+        authData = await signInWithPhone(credentials.identifier, credentials.password)
       }
-    } catch (error) {
-      console.error("Auth check failed:", error)
-      localStorage.removeItem("auth_token")
+
+      if (authData.user) {
+        const userData = await getCurrentUser()
+        setUser(userData)
+
+        if (userData) {
+          const redirectPath = getRedirectPath(userData.userType)
+          router.push(redirectPath)
+        }
+      }
+    } catch (error: any) {
+      throw new Error(error.message || "Échec de la connexion. Vérifiez vos identifiants.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const login = async (credentials: LoginCredentials) => {
-    try {
-      // Mock API call - replace with actual API
-      const response = await mockLogin(credentials)
-
-      localStorage.setItem("auth_token", response.token)
-      setUser(response.user)
-
-      // Redirect based on user type
-      const redirectPath = getRedirectPath(response.user.userType)
-      router.push(redirectPath)
-    } catch (error) {
-      throw new Error("Échec de la connexion. Vérifiez vos identifiants.")
-    }
-  }
-
   const register = async (userData: RegisterData) => {
     try {
-      // Mock API call - replace with actual API
-      const response = await mockRegister(userData)
+      setIsLoading(true)
 
-      localStorage.setItem("auth_token", response.token)
-      setUser(response.user)
+      const authData = await signUpWithEmail(userData)
 
-      // Redirect to onboarding or dashboard
-      const redirectPath = getRedirectPath(response.user.userType)
-      router.push(redirectPath)
-    } catch (error) {
-      throw new Error("Échec de l'inscription. Veuillez réessayer.")
+      if (authData.user) {
+        // User needs to verify email before full access
+        router.push("/auth/verify-email")
+      }
+    } catch (error: any) {
+      throw new Error(error.message || "Échec de l'inscription. Veuillez réessayer.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const logout = () => {
-    localStorage.removeItem("auth_token")
-    setUser(null)
-    router.push("/")
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      router.push("/")
+    } catch (error) {
+      console.error("Logout error:", error)
+    }
   }
 
-  const updateProfile = async (data: Partial<User>) => {
+  const updateProfile = async (data: Partial<AuthUser>) => {
     try {
-      // Mock API call - replace with actual API
-      const updatedUser = await mockUpdateProfile(user!.id, data)
+      if (!user) throw new Error("Utilisateur non connecté")
+
+      const { error } = await supabase
+        .from("user_profiles")
+        .update({
+          first_name: data.firstName,
+          last_name: data.lastName,
+          phone: data.phone,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id)
+
+      if (error) throw error
+
+      const updatedUser = await getCurrentUser()
       setUser(updatedUser)
-    } catch (error) {
-      throw new Error("Échec de la mise à jour du profil.")
+    } catch (error: any) {
+      throw new Error(error.message || "Échec de la mise à jour du profil.")
     }
   }
 
@@ -153,84 +171,4 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
-}
-
-// Mock API functions - replace with actual API calls
-async function mockLogin(credentials: LoginCredentials): Promise<{ token: string; user: User }> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  // Mock successful login
-  return {
-    token: "mock_jwt_token_" + Date.now(),
-    user: {
-      id: "1",
-      firstName: "Jean",
-      lastName: "Dupont",
-      email: credentials.identifier.includes("@") ? credentials.identifier : "jean.dupont@email.com",
-      phone: credentials.identifier.includes("@") ? "+243123456789" : credentials.identifier,
-      userType: "student",
-      isVerified: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  }
-}
-
-async function mockRegister(userData: RegisterData): Promise<{ token: string; user: User }> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-
-  // Mock successful registration
-  return {
-    token: "mock_jwt_token_" + Date.now(),
-    user: {
-      id: Date.now().toString(),
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      email: userData.email,
-      phone: userData.phone,
-      userType: userData.userType,
-      isVerified: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  }
-}
-
-async function validateToken(token: string): Promise<User> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  // Mock token validation
-  return {
-    id: "1",
-    firstName: "Jean",
-    lastName: "Dupont",
-    email: "jean.dupont@email.com",
-    phone: "+243123456789",
-    userType: "student",
-    isVerified: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-}
-
-async function mockUpdateProfile(userId: string, data: Partial<User>): Promise<User> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  // Mock profile update
-  return {
-    id: userId,
-    firstName: data.firstName || "Jean",
-    lastName: data.lastName || "Dupont",
-    email: data.email || "jean.dupont@email.com",
-    phone: data.phone || "+243123456789",
-    userType: data.userType || "student",
-    avatar: data.avatar,
-    isVerified: data.isVerified || true,
-    createdAt: "2024-01-01T00:00:00.000Z",
-    updatedAt: new Date().toISOString(),
-  }
 }
