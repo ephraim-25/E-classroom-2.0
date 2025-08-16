@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,7 @@ import {
   CheckCircle,
   BarChart3,
   Target,
+  RefreshCw,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -29,110 +30,69 @@ export function StudentDashboard() {
   const { user, logout } = useAuth()
   const [activeTab, setActiveTab] = useState("overview")
   const [searchQuery, setSearchQuery] = useState("")
+  const [dashboardData, setDashboardData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem("auth_token")
+        if (!token) return
+
+        const response = await fetch("/api/dashboard/student", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setDashboardData(data)
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (user) {
+      fetchDashboardData()
+    }
+  }, [user])
 
   if (!user) return null
 
-  const enrolledCourses = [
-    {
-      id: "1",
-      title: "Introduction au Marketing Digital",
-      instructor: "Marie Dubois",
-      progress: 75,
-      totalLessons: 12,
-      completedLessons: 9,
-      timeSpent: "8h 30min",
-      lastAccessed: "2024-01-20",
-      thumbnail: "/placeholder.svg?height=120&width=200",
-      category: "Marketing",
-      rating: 4.8,
-      isFavorite: true,
-      nextLesson: "Stratégies de contenu avancées",
-      estimatedTimeToComplete: "2h 15min",
-      certificateId: "EC-2024-001",
-    },
-    {
-      id: "2",
-      title: "Développement Web avec React",
-      instructor: "Jean-Paul Kamau",
-      progress: 45,
-      totalLessons: 20,
-      completedLessons: 9,
-      timeSpent: "12h 45min",
-      lastAccessed: "2024-01-18",
-      thumbnail: "/placeholder.svg?height=120&width=200",
-      category: "Technologie",
-      rating: 4.9,
-      isFavorite: false,
-      nextLesson: "Hooks avancés",
-      estimatedTimeToComplete: "8h 30min",
-      certificateId: "EC-2024-002",
-    },
-  ]
-
-  const completedCourses = [
-    {
-      id: "3",
-      title: "Bases du Marketing",
-      instructor: "Sophie Martin",
-      completedDate: "2024-01-15",
-      finalGrade: 92,
-      timeSpent: "6h 20min",
-      thumbnail: "/placeholder.svg?height=120&width=200",
-      category: "Marketing",
-      rating: 4.7,
-      certificateId: "EC-2024-001",
-    },
-    {
-      id: "4",
-      title: "HTML & CSS Fondamentaux",
-      instructor: "Ahmed Hassan",
-      completedDate: "2024-01-10",
-      finalGrade: 88,
-      timeSpent: "4h 15min",
-      thumbnail: "/placeholder.svg?height=120&width=200",
-      category: "Technologie",
-      rating: 4.6,
-      certificateId: "EC-2024-002",
-    },
-  ]
-
-  const certificates = [
-    {
-      id: "EC-2024-001",
-      courseTitle: "Bases du Marketing",
-      instructor: "Sophie Martin",
-      issueDate: "2024-01-15",
-      verificationCode: "EC-2024-001-VERIFY",
-      grade: 92,
-      skills: ["Marketing Digital", "Stratégie", "Analyse"],
-    },
-    {
-      id: "EC-2024-002",
-      courseTitle: "HTML & CSS Fondamentaux",
-      instructor: "Ahmed Hassan",
-      issueDate: "2024-01-10",
-      verificationCode: "EC-2024-002-VERIFY",
-      grade: 88,
-      skills: ["HTML", "CSS", "Web Design"],
-    },
-  ]
-
-  const learningStats = {
-    totalTimeSpent: "31h 30min",
-    coursesCompleted: 2,
-    coursesInProgress: 2,
-    averageGrade: 90,
-    skillsAcquired: 8,
-    streakDays: 15,
-    monthlyGoal: 20, // hours
-    monthlyProgress: 12, // hours completed this month
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+          <span className="text-gray-600">Chargement de votre tableau de bord...</span>
+        </div>
+      </div>
+    )
   }
 
-  const filteredEnrolledCourses = enrolledCourses.filter((course) =>
+  const enrolledCourses = dashboardData?.enrolledCourses || []
+  const completedCourses = dashboardData?.completedCourses || []
+  const certificates = dashboardData?.certificates || []
+  const learningStats = dashboardData?.learningStats || {
+    totalTimeSpent: "0h 0min",
+    coursesCompleted: 0,
+    coursesInProgress: 0,
+    averageGrade: 0,
+    skillsAcquired: 0,
+    streakDays: 0,
+    monthlyGoal: 20,
+    monthlyProgress: 0,
+  }
+
+  const filteredEnrolledCourses = enrolledCourses.filter((course: any) =>
     course.title.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const filteredCompletedCourses = completedCourses.filter((course) =>
+  const filteredCompletedCourses = completedCourses.filter((course: any) =>
     course.title.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
@@ -245,7 +205,7 @@ export function StudentDashboard() {
                 <CardDescription>Reprenez là où vous vous êtes arrêté</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {enrolledCourses.slice(0, 2).map((course) => (
+                {enrolledCourses.slice(0, 2).map((course: any) => (
                   <div key={course.id} className="flex space-x-4 p-4 border rounded-lg hover:bg-gray-50">
                     <img
                       src={course.thumbnail || "/placeholder.svg"}
@@ -307,7 +267,7 @@ export function StudentDashboard() {
                 <CardTitle className="text-blue-900">Cours en cours ({enrolledCourses.length})</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {filteredEnrolledCourses.map((course) => (
+                {filteredEnrolledCourses.map((course: any) => (
                   <div key={course.id} className="flex space-x-4 p-4 border rounded-lg hover:bg-gray-50">
                     <img
                       src={course.thumbnail || "/placeholder.svg"}
@@ -363,7 +323,7 @@ export function StudentDashboard() {
                 <CardTitle className="text-blue-900">Cours terminés ({completedCourses.length})</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {filteredCompletedCourses.map((course) => (
+                {filteredCompletedCourses.map((course: any) => (
                   <div key={course.id} className="flex space-x-4 p-4 border rounded-lg hover:bg-gray-50">
                     <img
                       src={course.thumbnail || "/placeholder.svg"}
@@ -418,7 +378,7 @@ export function StudentDashboard() {
                 <CardDescription>Tous vos certificats avec codes de vérification</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {certificates.map((cert) => (
+                {certificates.map((cert: any) => (
                   <div key={cert.id} className="border rounded-lg p-6 hover:bg-gray-50">
                     <div className="flex items-start justify-between mb-4">
                       <div>
@@ -443,7 +403,7 @@ export function StudentDashboard() {
                       <div>
                         <p className="text-sm font-medium text-gray-700">Compétences acquises:</p>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          {cert.skills.map((skill, index) => (
+                          {cert.skills.map((skill: string, index: number) => (
                             <Badge key={index} variant="outline" className="text-blue-600 border-blue-200">
                               {skill}
                             </Badge>

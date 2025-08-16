@@ -1,62 +1,76 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const users: any[] = []
-const otpCodes: Map<string, { code: string; expires: number; method: string }> = new Map()
-
 export async function POST(request: NextRequest) {
   try {
-    const { userId, otp, method } = await request.json()
+    const { identifier, otp, type } = await request.json()
 
-    if (!userId || !otp) {
-      return NextResponse.json({ error: "UserId et code OTP requis" }, { status: 400 })
+    // Validate input
+    if (!identifier || !otp || !type) {
+      return NextResponse.json({ error: "Identifiant, code OTP et type requis" }, { status: 400 })
     }
 
-    // Check OTP
-    const storedOTP = otpCodes.get(userId)
+    const storedOTP = await getStoredOTP(identifier, type)
+
     if (!storedOTP) {
-      return NextResponse.json({ error: "Code OTP expiré ou invalide" }, { status: 400 })
+      return NextResponse.json({ error: "Code de vérification non trouvé ou expiré" }, { status: 400 })
     }
 
-    if (storedOTP.code !== otp) {
-      return NextResponse.json({ error: "Code OTP incorrect" }, { status: 400 })
+    // Check if OTP is expired
+    if (new Date() > storedOTP.expiresAt) {
+      return NextResponse.json({ error: "Code de vérification expiré" }, { status: 400 })
     }
 
-    if (Date.now() > storedOTP.expires) {
-      otpCodes.delete(userId)
-      return NextResponse.json({ error: "Code OTP expiré" }, { status: 400 })
+    // Check attempts limit
+    if (storedOTP.attempts >= 3) {
+      return NextResponse.json({ error: "Trop de tentatives. Demandez un nouveau code." }, { status: 429 })
     }
 
-    // Find and verify user
-    const userIndex = users.findIndex((u) => u.id === userId)
-    if (userIndex === -1) {
-      return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 })
+    // Verify OTP
+    if (storedOTP.otp !== otp) {
+      // Increment attempts
+      await incrementOTPAttempts(identifier, type)
+      return NextResponse.json({ error: "Code de vérification incorrect" }, { status: 400 })
     }
 
-    // Mark user as verified
-    users[userIndex].isVerified = true
-    users[userIndex].updatedAt = new Date().toISOString()
+    // Mark OTP as verified
+    await markOTPAsVerified(identifier, type)
 
-    // Remove OTP
-    otpCodes.delete(userId)
-
-    // Generate auth token (simplified)
-    const token = `token_${userId}_${Date.now()}`
+    // Generate verification token for next step
+    const verificationToken = generateVerificationToken(identifier, type)
 
     return NextResponse.json({
-      message: "Compte vérifié avec succès",
-      token,
-      user: {
-        id: users[userIndex].id,
-        firstName: users[userIndex].firstName,
-        lastName: users[userIndex].lastName,
-        email: users[userIndex].email,
-        phone: users[userIndex].phone,
-        userType: users[userIndex].userType,
-        isVerified: true,
-      },
+      success: true,
+      message: "Code de vérification validé avec succès",
+      verificationToken,
+      type,
     })
   } catch (error) {
-    console.error("OTP verification error:", error)
-    return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 })
+    console.error("Verify OTP error:", error)
+    return NextResponse.json({ error: "Erreur lors de la vérification du code" }, { status: 500 })
   }
+}
+
+async function getStoredOTP(identifier: string, type: string) {
+  // Mock stored OTP data
+  return {
+    identifier,
+    otp: "123456", // In production, this would be hashed
+    type,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
+    attempts: 0,
+    verified: false,
+  }
+}
+
+async function incrementOTPAttempts(identifier: string, type: string) {
+  console.log(`[v0] Incrementing OTP attempts for ${identifier}`)
+}
+
+async function markOTPAsVerified(identifier: string, type: string) {
+  console.log(`[v0] Marking OTP as verified for ${identifier}`)
+}
+
+function generateVerificationToken(identifier: string, type: string): string {
+  // Simple token generation - in production use JWT or similar
+  return Buffer.from(`${identifier}:${type}:${Date.now()}`).toString("base64")
 }

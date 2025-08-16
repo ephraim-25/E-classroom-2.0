@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import jwt from "jsonwebtoken"
 
 // Mock transactions database
 const mockTransactions = [
@@ -46,11 +47,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Token d'authentification requis" }, { status: 401 })
     }
 
-    if (!token.startsWith("token_")) {
-      return NextResponse.json({ error: "Token invalide" }, { status: 401 })
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as {
+      userId: string
+      userType: string
     }
-
-    const [, tokenUserId, userType] = token.split("_")
 
     // Get query parameters
     const { searchParams } = new URL(request.url)
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status")
 
     // Filter transactions by user
-    let userTransactions = mockTransactions.filter((t) => t.userId === tokenUserId)
+    let userTransactions = mockTransactions.filter((t) => t.userId === decoded.userId)
 
     // Filter by status if provided
     if (status && status !== "all") {

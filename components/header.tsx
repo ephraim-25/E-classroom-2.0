@@ -4,8 +4,8 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Menu, X, BookOpen } from "lucide-react"
 import Link from "next/link"
-import { LanguageSelector } from "@/components/ui/language-selector"
 import { useLanguage } from "@/contexts/language-context"
+import { LanguageSelector } from "@/components/language-selector"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -31,18 +31,18 @@ export function Header() {
             <Link href="/library" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
               {t("nav.library")}
             </Link>
-            <a href="#formations" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-              {t("nav.formations")}
-            </a>
-            <a href="#masterclass" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-              {t("nav.masterclass")}
-            </a>
-            <a href="#partners" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-              {t("nav.partners")}
-            </a>
+            <Link href="/forum" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+              {t("nav.forum")}
+            </Link>
+            <Link href="/about" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+              {t("nav.about")}
+            </Link>
+            <Link href="/contact" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+              {t("nav.contact")}
+            </Link>
           </nav>
 
-          {/* Desktop Auth Buttons & Language Selector */}
+          {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <LanguageSelector />
             <Link href="/auth/login">
@@ -71,18 +71,17 @@ export function Header() {
               <Link href="/library" className="text-gray-700 hover:text-blue-600 font-medium">
                 {t("nav.library")}
               </Link>
-              <a href="#formations" className="text-gray-700 hover:text-blue-600 font-medium">
-                {t("nav.formations")}
-              </a>
-              <a href="#masterclass" className="text-gray-700 hover:text-blue-600 font-medium">
-                {t("nav.masterclass")}
-              </a>
-              <a href="#partners" className="text-gray-700 hover:text-blue-600 font-medium">
-                {t("nav.partners")}
-              </a>
+              <Link href="/forum" className="text-gray-700 hover:text-blue-600 font-medium">
+                {t("nav.forum")}
+              </Link>
+              <Link href="/about" className="text-gray-700 hover:text-blue-600 font-medium">
+                {t("nav.about")}
+              </Link>
+              <Link href="/contact" className="text-gray-700 hover:text-blue-600 font-medium">
+                {t("nav.contact")}
+              </Link>
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Langue:</span>
+                <div className="px-2">
                   <LanguageSelector />
                 </div>
                 <Link href="/auth/login">

@@ -62,6 +62,26 @@ const mockStudentData = {
     monthlyGoal: 20,
     monthlyProgress: 12,
   },
+  certificates: [
+    {
+      id: "EC-2024-001",
+      courseTitle: "Bases du Marketing",
+      instructor: "Sophie Martin",
+      issueDate: "2024-01-15",
+      verificationCode: "EC-2024-001-VERIFY",
+      grade: 92,
+      skills: ["Marketing Digital", "Stratégie", "Analyse"],
+    },
+    {
+      id: "EC-2024-002",
+      courseTitle: "HTML & CSS Fondamentaux",
+      instructor: "Ahmed Hassan",
+      issueDate: "2024-01-10",
+      verificationCode: "EC-2024-002-VERIFY",
+      grade: 88,
+      skills: ["HTML", "CSS", "Web Design"],
+    },
+  ],
 }
 
 // GET /api/dashboard/student - Get student dashboard data
@@ -73,14 +93,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Token d'authentification requis" }, { status: 401 })
     }
 
-    // Simple token verification (replace JWT)
-    if (!token.startsWith("token_")) {
-      return NextResponse.json({ error: "Token invalide" }, { status: 401 })
-    }
-
-    const [, userId, userType] = token.split("_")
-
-    if (userType !== "student") {
+    const decoded = validateSimpleToken(token)
+    if (!decoded || decoded.userType !== "student") {
       return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
     }
 
@@ -89,5 +103,22 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching student dashboard:", error)
     return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 })
+  }
+}
+
+function validateSimpleToken(token: string) {
+  try {
+    const decoded = Buffer.from(token, "base64").toString()
+    const [userId, userType, timestamp] = decoded.split(":")
+
+    // Check if token is not older than 24 hours
+    const tokenAge = Date.now() - Number.parseInt(timestamp)
+    if (tokenAge > 24 * 60 * 60 * 1000) {
+      return null
+    }
+
+    return { userId, userType }
+  } catch {
+    return null
   }
 }

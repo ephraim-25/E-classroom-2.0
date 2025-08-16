@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://e-classroom.vercel.app/sitemap.xml
+
+# Disallow admin and API routes from crawling
+Disallow: /api/
+Disallow: /dashboard/admin/
+Disallow: /checkout/
+Disallow: /payment/
+
+# Allow important pages
+Allow: /
+Allow: /courses/
+Allow: /library/
+Allow: /forum/
+Allow: /about/
+Allow: /contact/

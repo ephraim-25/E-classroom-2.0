@@ -5,271 +5,192 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { CheckCircle, XCircle, Clock, Award, RotateCcw } from "lucide-react"
+import { CheckCircle, XCircle, Clock, Award } from "lucide-react"
 
 interface QuizQuestion {
   id: string
-  type: "single" | "multiple" | "true-false"
   question: string
-  options: string[]
-  correctAnswers: number[]
+  type: "multiple-choice" | "true-false" | "text"
+  options?: string[]
+  correctAnswer: string | number
   explanation: string
   points: number
 }
 
-interface QuizProps {
-  quizId: string
-  courseId: string
-  lessonId: string
+interface Quiz {
+  id: string
+  title: string
+  description: string
+  questions: QuizQuestion[]
+  timeLimit: number // in minutes
+  passingScore: number // percentage
+  attempts: number
+}
+
+interface QuizComponentProps {
+  quiz: Quiz
   onComplete: (score: number, passed: boolean) => void
 }
 
-const mockQuizData = {
-  id: "quiz-1",
-  title: "Quiz : Introduction au Marketing Digital",
-  description: "Testez vos connaissances sur les bases du marketing digital",
-  timeLimit: 600, // 10 minutes in seconds
-  passingScore: 70,
-  questions: [
-    {
-      id: "q1",
-      type: "single" as const,
-      question: "Qu'est-ce que le marketing digital ?",
-      options: [
-        "La vente de produits numériques uniquement",
-        "L'ensemble des techniques marketing utilisant les canaux digitaux",
-        "La création de sites web",
-        "La gestion des réseaux sociaux uniquement",
-      ],
-      correctAnswers: [1],
-      explanation:
-        "Le marketing digital englobe toutes les techniques marketing qui utilisent les canaux et supports numériques.",
-      points: 10,
-    },
-    {
-      id: "q2",
-      type: "multiple" as const,
-      question: "Quels sont les principaux canaux du marketing digital ? (Plusieurs réponses possibles)",
-      options: ["SEO/SEA", "Réseaux sociaux", "Email marketing", "Radio traditionnelle", "Content marketing"],
-      correctAnswers: [0, 1, 2, 4],
-      explanation:
-        "Les principaux canaux digitaux incluent le SEO/SEA, les réseaux sociaux, l'email marketing et le content marketing. La radio traditionnelle n'est pas un canal digital.",
-      points: 15,
-    },
-    {
-      id: "q3",
-      type: "true-false" as const,
-      question: "Le SEO (Search Engine Optimization) est une technique payante.",
-      options: ["Vrai", "Faux"],
-      correctAnswers: [1],
-      explanation:
-        "Faux. Le SEO est une technique gratuite qui vise à optimiser le référencement naturel d'un site web dans les moteurs de recherche.",
-      points: 10,
-    },
-    {
-      id: "q4",
-      type: "single" as const,
-      question: "Que signifie KPI dans le contexte du marketing digital ?",
-      options: [
-        "Key Performance Indicator",
-        "Keep Performance Improved",
-        "Knowledge Performance Index",
-        "Key Product Information",
-      ],
-      correctAnswers: [0],
-      explanation:
-        "KPI signifie Key Performance Indicator (Indicateur Clé de Performance), utilisé pour mesurer l'efficacité des actions marketing.",
-      points: 10,
-    },
-    {
-      id: "q5",
-      type: "multiple" as const,
-      question: "Quels sont les avantages du marketing digital par rapport au marketing traditionnel ?",
-      options: [
-        "Coût généralement plus faible",
-        "Ciblage plus précis",
-        "Mesure des résultats en temps réel",
-        "Portée géographique limitée",
-        "Interaction avec les clients",
-      ],
-      correctAnswers: [0, 1, 2, 4],
-      explanation:
-        "Le marketing digital offre un coût plus faible, un ciblage précis, une mesure en temps réel et l'interaction client. La portée géographique est au contraire élargie.",
-      points: 15,
-    },
-  ],
-}
-
-export function QuizComponent({ quizId, courseId, lessonId, onComplete }: QuizProps) {
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, number[]>>({})
-  const [timeLeft, setTimeLeft] = useState(mockQuizData.timeLimit)
-  const [isCompleted, setIsCompleted] = useState(false)
+export function QuizComponent({ quiz, onComplete }: QuizComponentProps) {
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [answers, setAnswers] = useState<Record<string, string | number>>({})
   const [showResults, setShowResults] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(quiz.timeLimit * 60) // Convert to seconds
+  const [isSubmitted, setIsSubmitted] = useState(false)
   const [score, setScore] = useState(0)
-  const [isStarted, setIsStarted] = useState(false)
+  const [correctAnswers, setCorrectAnswers] = useState(0)
 
-  const quiz = mockQuizData
-  const totalQuestions = quiz.questions.length
-  const progress = ((currentQuestion + 1) / totalQuestions) * 100
+  const currentQuestion = quiz.questions[currentQuestionIndex]
+  const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1
+  const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100
 
-  // Timer effect
   useEffect(() => {
-    if (isStarted && !isCompleted && timeLeft > 0) {
+    if (timeLeft > 0 && !isSubmitted) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000)
       return () => clearTimeout(timer)
-    } else if (timeLeft === 0 && !isCompleted) {
+    } else if (timeLeft === 0 && !isSubmitted) {
       handleSubmitQuiz()
     }
-  }, [timeLeft, isStarted, isCompleted])
+  }, [timeLeft, isSubmitted])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+    return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  const handleAnswerChange = (questionId: string, answerIndex: number, isMultiple = false) => {
-    setAnswers((prev) => {
-      if (isMultiple) {
-        const currentAnswers = prev[questionId] || []
-        const newAnswers = currentAnswers.includes(answerIndex)
-          ? currentAnswers.filter((a) => a !== answerIndex)
-          : [...currentAnswers, answerIndex]
-        return { ...prev, [questionId]: newAnswers }
-      } else {
-        return { ...prev, [questionId]: [answerIndex] }
-      }
-    })
+  const handleAnswerSelect = (answer: string | number) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestion.id]: answer,
+    }))
+  }
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < quiz.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1)
+    }
+  }
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1)
+    }
   }
 
   const calculateScore = () => {
+    let correct = 0
     let totalPoints = 0
-    let earnedPoints = 0
 
     quiz.questions.forEach((question) => {
       totalPoints += question.points
-      const userAnswers = answers[question.id] || []
-      const correctAnswers = question.correctAnswers
+      const userAnswer = answers[question.id]
 
-      // Check if answers match exactly
-      if (
-        userAnswers.length === correctAnswers.length &&
-        userAnswers.every((answer) => correctAnswers.includes(answer))
-      ) {
-        earnedPoints += question.points
+      if (question.type === "multiple-choice" || question.type === "true-false") {
+        if (userAnswer === question.correctAnswer) {
+          correct += question.points
+        }
+      } else if (question.type === "text") {
+        // Simple text comparison (in real app, use more sophisticated matching)
+        if (userAnswer?.toString().toLowerCase().trim() === question.correctAnswer.toString().toLowerCase().trim()) {
+          correct += question.points
+        }
       }
     })
 
-    return Math.round((earnedPoints / totalPoints) * 100)
+    const percentage = Math.round((correct / totalPoints) * 100)
+    const correctCount = quiz.questions.filter((q) => {
+      const userAnswer = answers[q.id]
+      return userAnswer === q.correctAnswer
+    }).length
+
+    setScore(percentage)
+    setCorrectAnswers(correctCount)
+    return { percentage, correctCount }
   }
 
   const handleSubmitQuiz = () => {
-    const finalScore = calculateScore()
-    setScore(finalScore)
-    setIsCompleted(true)
+    const { percentage } = calculateScore()
+    const passed = percentage >= quiz.passingScore
+
+    setIsSubmitted(true)
     setShowResults(true)
-
-    const passed = finalScore >= quiz.passingScore
-    onComplete(finalScore, passed)
-  }
-
-  const handleRetakeQuiz = () => {
-    setCurrentQuestion(0)
-    setAnswers({})
-    setTimeLeft(quiz.timeLimit)
-    setIsCompleted(false)
-    setShowResults(false)
-    setScore(0)
-    setIsStarted(false)
-  }
-
-  const currentQ = quiz.questions[currentQuestion]
-
-  if (!isStarted) {
-    return (
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-blue-900">{quiz.title}</CardTitle>
-          <p className="text-gray-600">{quiz.description}</p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid md:grid-cols-3 gap-4 text-center">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-900">{totalQuestions}</div>
-              <div className="text-sm text-gray-600">Questions</div>
-            </div>
-            <div className="p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-900">{formatTime(quiz.timeLimit)}</div>
-              <div className="text-sm text-gray-600">Temps limite</div>
-            </div>
-            <div className="p-4 bg-yellow-50 rounded-lg">
-              <div className="text-2xl font-bold text-yellow-900">{quiz.passingScore}%</div>
-              <div className="text-sm text-gray-600">Score minimum</div>
-            </div>
-          </div>
-          <div className="text-center">
-            <Button onClick={() => setIsStarted(true)} className="bg-blue-600 hover:bg-blue-700 px-8 py-3">
-              Commencer le quiz
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    )
+    onComplete(percentage, passed)
   }
 
   if (showResults) {
     const passed = score >= quiz.passingScore
+
     return (
       <Card className="max-w-2xl mx-auto">
         <CardHeader className="text-center">
-          <div className="mb-4">
-            {passed ? (
-              <CheckCircle className="w-16 h-16 text-green-600 mx-auto" />
-            ) : (
-              <XCircle className="w-16 h-16 text-red-600 mx-auto" />
-            )}
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+              passed ? "bg-green-100" : "bg-red-100"
+            }`}
+          >
+            {passed ? <Award className="w-8 h-8 text-green-600" /> : <XCircle className="w-8 h-8 text-red-600" />}
           </div>
-          <CardTitle className="text-2xl text-blue-900">{passed ? "Félicitations !" : "Quiz non réussi"}</CardTitle>
-          <p className="text-gray-600">
-            {passed
-              ? "Vous avez réussi le quiz avec succès !"
-              : "Vous pouvez reprendre le quiz pour améliorer votre score."}
-          </p>
+          <CardTitle className={`text-2xl ${passed ? "text-green-600" : "text-red-600"}`}>
+            {passed ? "Félicitations !" : "Échec au quiz"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-blue-900 mb-2">{score}%</div>
-            <Badge className={passed ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}>
-              {passed ? "Réussi" : "Échec"}
-            </Badge>
+          <div className="text-center space-y-4">
+            <div className="text-4xl font-bold text-blue-900">{score}%</div>
+            <p className="text-gray-600">
+              {correctAnswers} sur {quiz.questions.length} questions correctes
+            </p>
+            <p className="text-sm text-gray-500">Score minimum requis: {quiz.passingScore}%</p>
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-semibold text-blue-900">Résultats détaillés :</h3>
+            <h3 className="font-semibold text-blue-900">Résultats détaillés</h3>
             {quiz.questions.map((question, index) => {
-              const userAnswers = answers[question.id] || []
-              const isCorrect =
-                userAnswers.length === question.correctAnswers.length &&
-                userAnswers.every((answer) => question.correctAnswers.includes(answer))
+              const userAnswer = answers[question.id]
+              const isCorrect = userAnswer === question.correctAnswer
 
               return (
-                <div key={question.id} className="p-4 border rounded-lg">
+                <div key={question.id} className="border rounded-lg p-4">
                   <div className="flex items-start space-x-3">
-                    {isCorrect ? (
-                      <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-red-600 mt-1 flex-shrink-0" />
-                    )}
-                    <div className="flex-1">
-                      <h4 className="font-medium text-blue-900 mb-2">Question {index + 1}</h4>
-                      <p className="text-sm text-gray-700 mb-2">{question.question}</p>
-                      <p className="text-xs text-gray-600">{question.explanation}</p>
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        isCorrect ? "bg-green-100" : "bg-red-100"
+                      }`}
+                    >
+                      {isCorrect ? (
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-red-600" />
+                      )}
                     </div>
-                    <div className="text-sm font-medium">{isCorrect ? `+${question.points}` : "0"} pts</div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 mb-2">
+                        Question {index + 1}: {question.question}
+                      </p>
+                      <div className="space-y-1 text-sm">
+                        <p className="text-gray-600">
+                          Votre réponse:{" "}
+                          <span className={isCorrect ? "text-green-600" : "text-red-600"}>
+                            {question.type === "multiple-choice" && question.options
+                              ? question.options[userAnswer as number]
+                              : userAnswer?.toString() || "Pas de réponse"}
+                          </span>
+                        </p>
+                        {!isCorrect && (
+                          <p className="text-gray-600">
+                            Bonne réponse:{" "}
+                            <span className="text-green-600">
+                              {question.type === "multiple-choice" && question.options
+                                ? question.options[question.correctAnswer as number]
+                                : question.correctAnswer.toString()}
+                            </span>
+                          </p>
+                        )}
+                        <p className="text-gray-500 italic">{question.explanation}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )
@@ -277,15 +198,13 @@ export function QuizComponent({ quizId, courseId, lessonId, onComplete }: QuizPr
           </div>
 
           <div className="flex justify-center space-x-4">
-            {passed && (
-              <Button className="bg-green-600 hover:bg-green-700">
-                <Award className="w-4 h-4 mr-2" />
-                Continuer le cours
+            {!passed && quiz.attempts > 1 && (
+              <Button onClick={() => window.location.reload()} variant="outline" className="border-blue-200">
+                Réessayer
               </Button>
             )}
-            <Button onClick={handleRetakeQuiz} variant="outline">
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reprendre le quiz
+            <Button onClick={() => window.history.back()} className="bg-blue-600 hover:bg-blue-700">
+              Continuer le cours
             </Button>
           </div>
         </CardContent>
@@ -294,80 +213,141 @@ export function QuizComponent({ quizId, courseId, lessonId, onComplete }: QuizPr
   }
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center space-x-2">
-            <Clock className="w-5 h-5 text-blue-600" />
-            <span className="font-medium text-blue-900">{formatTime(timeLeft)}</span>
-          </div>
-          <Badge variant="outline">
-            Question {currentQuestion + 1} sur {totalQuestions}
-          </Badge>
-        </div>
-        <Progress value={progress} className="h-2" />
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        <div>
-          <h3 className="text-lg font-semibold text-blue-900 mb-4">{currentQ.question}</h3>
-
-          {currentQ.type === "single" || currentQ.type === "true-false" ? (
-            <RadioGroup
-              value={answers[currentQ.id]?.[0]?.toString() || ""}
-              onValueChange={(value) => handleAnswerChange(currentQ.id, Number.parseInt(value))}
-            >
-              {currentQ.options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                  <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-                  <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          ) : (
-            <div className="space-y-2">
-              {currentQ.options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                  <Checkbox
-                    id={`option-${index}`}
-                    checked={answers[currentQ.id]?.includes(index) || false}
-                    onCheckedChange={() => handleAnswerChange(currentQ.id, index, true)}
-                  />
-                  <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
-                    {option}
-                  </Label>
-                </div>
-              ))}
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Quiz Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-blue-900">{quiz.title}</CardTitle>
+              <p className="text-gray-600 mt-1">{quiz.description}</p>
             </div>
-          )}
-        </div>
+            <div className="text-right">
+              <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
+                <Clock className="w-4 h-4" />
+                <span>Temps restant: {formatTime(timeLeft)}</span>
+              </div>
+              <Badge variant="outline" className="text-blue-600 border-blue-200">
+                Question {currentQuestionIndex + 1} sur {quiz.questions.length}
+              </Badge>
+            </div>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </CardHeader>
+      </Card>
 
-        <div className="flex justify-between">
-          <Button
-            onClick={() => setCurrentQuestion(currentQuestion - 1)}
-            disabled={currentQuestion === 0}
-            variant="outline"
-          >
-            Précédent
-          </Button>
+      {/* Question Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Question {currentQuestionIndex + 1}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <p className="text-lg text-gray-900">{currentQuestion.question}</p>
 
-          {currentQuestion === totalQuestions - 1 ? (
-            <Button onClick={handleSubmitQuiz} className="bg-green-600 hover:bg-green-700">
-              Terminer le quiz
-            </Button>
-          ) : (
+          <div className="space-y-3">
+            {currentQuestion.type === "multiple-choice" && currentQuestion.options && (
+              <div className="space-y-2">
+                {currentQuestion.options.map((option, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleAnswerSelect(index)}
+                    className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
+                      answers[currentQuestion.id] === index
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-4 h-4 rounded-full border-2 ${
+                          answers[currentQuestion.id] === index ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                        }`}
+                      >
+                        {answers[currentQuestion.id] === index && (
+                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                        )}
+                      </div>
+                      <span>{option}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {currentQuestion.type === "true-false" && (
+              <div className="space-y-2">
+                {["Vrai", "Faux"].map((option, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleAnswerSelect(index)}
+                    className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
+                      answers[currentQuestion.id] === index
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-4 h-4 rounded-full border-2 ${
+                          answers[currentQuestion.id] === index ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                        }`}
+                      >
+                        {answers[currentQuestion.id] === index && (
+                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                        )}
+                      </div>
+                      <span>{option}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {currentQuestion.type === "text" && (
+              <input
+                type="text"
+                placeholder="Tapez votre réponse..."
+                value={answers[currentQuestion.id]?.toString() || ""}
+                onChange={(e) => handleAnswerSelect(e.target.value)}
+                className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
+              />
+            )}
+          </div>
+
+          <div className="flex justify-between items-center pt-4 border-t">
             <Button
-              onClick={() => setCurrentQuestion(currentQuestion + 1)}
-              disabled={!answers[currentQ.id] || answers[currentQ.id].length === 0}
-              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handlePreviousQuestion}
+              disabled={currentQuestionIndex === 0}
+              variant="outline"
+              className="bg-transparent"
             >
-              Suivant
+              Précédent
             </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+
+            <div className="text-sm text-gray-500">
+              {currentQuestion.points} point{currentQuestion.points > 1 ? "s" : ""}
+            </div>
+
+            {isLastQuestion ? (
+              <Button
+                onClick={handleSubmitQuiz}
+                disabled={!answers[currentQuestion.id]}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Terminer le quiz
+              </Button>
+            ) : (
+              <Button
+                onClick={handleNextQuestion}
+                disabled={!answers[currentQuestion.id]}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Suivant
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

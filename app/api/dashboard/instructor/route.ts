@@ -91,14 +91,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Token d'authentification requis" }, { status: 401 })
     }
 
-    // Simple token verification (replace JWT)
-    if (!token.startsWith("token_")) {
-      return NextResponse.json({ error: "Token invalide" }, { status: 401 })
-    }
-
-    const [, userId, userType] = token.split("_")
-
-    if (userType !== "instructor") {
+    const decoded = validateSimpleToken(token)
+    if (!decoded || decoded.userType !== "instructor") {
       return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
     }
 
@@ -107,5 +101,22 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching instructor dashboard:", error)
     return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 })
+  }
+}
+
+function validateSimpleToken(token: string) {
+  try {
+    const decoded = Buffer.from(token, "base64").toString()
+    const [userId, userType, timestamp] = decoded.split(":")
+
+    // Check if token is not older than 24 hours
+    const tokenAge = Date.now() - Number.parseInt(timestamp)
+    if (tokenAge > 24 * 60 * 60 * 1000) {
+      return null
+    }
+
+    return { userId, userType }
+  } catch {
+    return null
   }
 }

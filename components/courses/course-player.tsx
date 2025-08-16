@@ -23,6 +23,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  BookOpen,
 } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
@@ -276,6 +277,18 @@ export function CoursePlayer({ courseId, currentLessonId }: CoursePlayerProps) {
     // Implement download logic
   }
 
+  const extractYouTubeId = (url: string): string => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+    const match = url.match(regExp)
+    return match && match[2].length === 11 ? match[2] : ""
+  }
+
+  const extractVimeoId = (url: string): string => {
+    const regExp = /vimeo.com\/(\d+)/
+    const match = url.match(regExp)
+    return match ? match[1] : ""
+  }
+
   if (!currentLesson) {
     return <div>Loading...</div>
   }
@@ -299,6 +312,16 @@ export function CoursePlayer({ courseId, currentLessonId }: CoursePlayerProps) {
               {course.completedLessons}/{course.totalLessons} leçons
             </div>
             <Progress value={course.progress} className="w-32 h-2" />
+            <Link href={`/courses/${courseId}/quiz/quiz-1`}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-white bg-transparent"
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                Quiz
+              </Button>
+            </Link>
             <Button
               variant="ghost"
               size="sm"
@@ -317,20 +340,35 @@ export function CoursePlayer({ courseId, currentLessonId }: CoursePlayerProps) {
           {/* Video Player */}
           <div className="relative bg-black flex-1 flex items-center justify-center">
             <div className="w-full h-full max-w-4xl mx-auto relative">
-              {/* Video Element Placeholder */}
-              <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+              {currentLesson?.videoUrl?.includes("youtube.com") || currentLesson?.videoUrl?.includes("youtu.be") ? (
+                <iframe
+                  src={`https://www.youtube.com/embed/${extractYouTubeId(currentLesson.videoUrl)}?autoplay=1&controls=1`}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : currentLesson?.videoUrl?.includes("vimeo.com") ? (
+                <iframe
+                  src={`https://player.vimeo.com/video/${extractVimeoId(currentLesson.videoUrl)}?autoplay=1`}
+                  className="w-full h-full"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
                 <div className="text-center space-y-4">
                   <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto">
                     <Play className="w-8 h-8 text-white ml-1" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold mb-2">{currentLesson.title}</h3>
-                    <p className="text-gray-400">Durée: {currentLesson.duration}</p>
+                    <h3 className="text-xl font-semibold">{currentLesson?.title}</h3>
+                    <p className="text-gray-400">Durée: {currentLesson?.duration}</p>
                   </div>
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Video Controls */}
+            {/* Video Controls - only show for non-embedded videos */}
+            {!currentLesson?.videoUrl?.includes("youtube.com") && !currentLesson?.videoUrl?.includes("vimeo.com") && (
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                 <div className="space-y-2">
                   {/* Progress Bar */}
@@ -387,7 +425,7 @@ export function CoursePlayer({ courseId, currentLessonId }: CoursePlayerProps) {
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Lesson Info */}

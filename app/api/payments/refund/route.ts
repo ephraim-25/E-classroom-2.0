@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import jwt from "jsonwebtoken"
 
 // POST /api/payments/refund - Process refund request
 export async function POST(request: NextRequest) {
@@ -10,14 +11,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Token d'authentification requis" }, { status: 401 })
     }
 
-    if (!token.startsWith("token_")) {
-      return NextResponse.json({ error: "Token invalide" }, { status: 401 })
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as {
+      userId: string
+      userType: string
     }
 
-    const [, tokenUserId, userType] = token.split("_")
-
     // Only admin can process refunds
-    if (userType !== "admin") {
+    if (decoded.userType !== "admin") {
       return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
     }
 
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
       amount: transaction.amount,
       reason,
       status: refundResult.success ? "completed" : "failed",
-      processedBy: tokenUserId,
+      processedBy: decoded.userId,
       timestamp: new Date().toISOString(),
       providerRefundId: refundResult.refundId,
     }
