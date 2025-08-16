@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card"
-import { BookOpen, Users, Award, Smartphone, Download, CreditCard } from "lucide-react"
+import { BookOpen, Users, Award, Smartphone, Download, CreditCard } from "@/components/icons"
 
 const features = [
   {

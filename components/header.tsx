@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Menu, X, BookOpen } from "lucide-react"
+import { Menu, X, BookOpen } from "@/components/icons"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
 import { LanguageSelector } from "@/components/language-selector"
