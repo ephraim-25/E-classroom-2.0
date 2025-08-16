@@ -1,4 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +19,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if OTP is expired
-    if (new Date() > storedOTP.expiresAt) {
+    if (new Date() > new Date(storedOTP.expires_at)) {
+      await deleteOTP(identifier, type)
       return NextResponse.json({ error: "Code de vérification expiré" }, { status: 400 })
     }
 
@@ -26,14 +30,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify OTP
-    if (storedOTP.otp !== otp) {
+    if (storedOTP.otp_code !== otp) {
       // Increment attempts
       await incrementOTPAttempts(identifier, type)
       return NextResponse.json({ error: "Code de vérification incorrect" }, { status: 400 })
     }
 
-    // Mark OTP as verified
     await markOTPAsVerified(identifier, type)
+    await deleteOTP(identifier, type)
 
     // Generate verification token for next step
     const verificationToken = generateVerificationToken(identifier, type)
@@ -51,23 +55,56 @@ export async function POST(request: NextRequest) {
 }
 
 async function getStoredOTP(identifier: string, type: string) {
-  // Mock stored OTP data
-  return {
-    identifier,
-    otp: "123456", // In production, this would be hashed
-    type,
-    expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
-    attempts: 0,
-    verified: false,
+  const { data, error } = await supabase
+    .from("otp_codes")
+    .select("*")
+    .eq("identifier", identifier)
+    .eq("type", type)
+    .eq("verified", false)
+    .single()
+
+  if (error) {
+    console.error("Get OTP error:", error)
+    return null
   }
+
+  return data
 }
 
 async function incrementOTPAttempts(identifier: string, type: string) {
   console.log(`[v0] Incrementing OTP attempts for ${identifier}`)
+
+  const { error } = await supabase
+    .from("otp_codes")
+    .update({ attempts: supabase.raw("attempts + 1") })
+    .eq("identifier", identifier)
+    .eq("type", type)
+
+  if (error) {
+    console.error("Increment attempts error:", error)
+  }
 }
 
 async function markOTPAsVerified(identifier: string, type: string) {
   console.log(`[v0] Marking OTP as verified for ${identifier}`)
+
+  const { error } = await supabase
+    .from("otp_codes")
+    .update({ verified: true })
+    .eq("identifier", identifier)
+    .eq("type", type)
+
+  if (error) {
+    console.error("Mark verified error:", error)
+  }
+}
+
+async function deleteOTP(identifier: string, type: string) {
+  const { error } = await supabase.from("otp_codes").delete().eq("identifier", identifier).eq("type", type)
+
+  if (error) {
+    console.error("Delete OTP error:", error)
+  }
 }
 
 function generateVerificationToken(identifier: string, type: string): string {

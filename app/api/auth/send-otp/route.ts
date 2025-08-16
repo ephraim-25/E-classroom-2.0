@@ -1,4 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
+import sgMail from "@sendgrid/mail"
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY!)
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,18 +18,25 @@ export async function POST(request: NextRequest) {
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
 
-    // Store OTP in database/cache (mock implementation)
-    const otpData = {
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+
+    const { error: dbError } = await supabase.from("otp_codes").upsert({
       identifier,
-      otp,
-      type, // 'login', 'register', 'reset-password'
-      method, // 'email' or 'sms'
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      otp_code: otp,
+      type,
+      method,
+      expires_at: expiresAt.toISOString(),
       attempts: 0,
       verified: false,
+      created_at: new Date().toISOString(),
+    })
+
+    if (dbError) {
+      console.error("Database error:", dbError)
+      return NextResponse.json({ error: "Erreur lors de la sauvegarde du code" }, { status: 500 })
     }
 
-    console.log("[v0] OTP generated:", { identifier, otp, type, method })
+    console.log("[v0] OTP generated and stored:", { identifier, otp, type, method })
 
     // Send OTP via email or SMS
     if (method === "email") {
@@ -35,7 +48,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Code de vérification envoyé par ${method === "email" ? "email" : "SMS"}`,
-      expiresIn: 600, // 10 minutes in seconds
+      expiresIn: 300, // 5 minutes in seconds
     })
   } catch (error) {
     console.error("Send OTP error:", error)
@@ -46,21 +59,36 @@ export async function POST(request: NextRequest) {
 async function sendEmailOTP(email: string, otp: string, type: string) {
   console.log(`[v0] Sending email OTP to ${email}: ${otp} for ${type}`)
 
-  // Simulate email sending delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+  const msg = {
+    to: email,
+    from: process.env.SENDGRID_FROM_EMAIL!,
+    subject: "Votre code de vérification E-Classroom",
+    text: `Votre code de vérification est : ${otp}. Il expire dans 5 minutes.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">E-Classroom</h2>
+        <p>Votre code de vérification est :</p>
+        <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+          ${otp}
+        </div>
+        <p style="color: #6b7280;">Ce code expire dans 5 minutes.</p>
+        <p style="color: #6b7280;">Si vous n'avez pas demandé ce code, ignorez cet email.</p>
+      </div>
+    `,
+  }
 
-  // In production, use services like:
-  // - Resend, SendGrid, AWS SES, etc.
-  return true
+  try {
+    await sgMail.send(msg)
+    console.log(`[v0] Email sent successfully to ${email}`)
+    return true
+  } catch (error) {
+    console.error("SendGrid error:", error)
+    throw new Error("Erreur lors de l'envoi de l'email")
+  }
 }
 
 async function sendSMSOTP(phone: string, otp: string, type: string) {
-  console.log(`[v0] Sending SMS OTP to ${phone}: ${otp} for ${type}`)
-
-  // Simulate SMS sending delay
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-
-  // In production, use services like:
-  // - Twilio, AWS SNS, Africa's Talking, etc.
+  console.log(`[v0] SMS OTP sending not implemented yet for ${phone}: ${otp} for ${type}`)
+  // SMS will be implemented later as requested
   return true
 }
