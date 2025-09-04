@@ -1,6 +1,6 @@
 import { RegisterForm } from "@/components/auth/register-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen } from "lucide-react"
+import { BookOpen } from "@/components/icons"
 import Link from "next/link"
 
 export default function RegisterPage() {

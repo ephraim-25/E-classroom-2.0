@@ -1,68 +1,66 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Mail, Phone, Chrome, AlertCircle } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { supabase } from "@/lib/supabase" // Declare the supabase variable
+import { Eye, EyeOff, AlertCircle } from "@/components/icons"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
-  const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email")
   const [formData, setFormData] = useState({
     email: "",
-    phone: "",
     password: "",
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-
-  const { login } = useAuth()
+  const router = useRouter()
+  const supabase = createClientComponentClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
 
-    if (!formData.password || formData.password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères")
-      setIsLoading(false)
-      return
-    }
-
-    const identifier = loginMethod === "email" ? formData.email : formData.phone
-    if (!identifier) {
-      setError(`Veuillez saisir votre ${loginMethod === "email" ? "email" : "numéro de téléphone"}`)
+    if (!formData.email || !formData.password) {
+      setError("Veuillez remplir tous les champs")
       setIsLoading(false)
       return
     }
 
     try {
-      await login({
-        identifier,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
         password: formData.password,
-        method: loginMethod,
       })
+
+      if (error) {
+        setError("Email ou mot de passe incorrect")
+        return
+      }
+
+      if (data.user) {
+        // Get user profile to determine redirect
+        const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single()
+
+        // Redirect based on role
+        if (profile?.role === "admin") {
+          router.push("/dashboard/admin")
+        } else if (profile?.role === "instructor") {
+          router.push("/dashboard/instructor")
+        } else {
+          router.push("/dashboard/student")
+        }
+      }
     } catch (error: any) {
-      setError(error.message || "Erreur de connexion")
+      setError("Erreur de connexion")
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const handleSocialLogin = (provider: "google" | "facebook") => {
-    if (provider === "google") {
-      supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
     }
   }
 
@@ -75,45 +73,16 @@ export function LoginForm() {
         </Alert>
       )}
 
-      {/* Login Method Toggle */}
-      <div className="flex bg-gray-100 rounded-lg p-1">
-        <button
-          type="button"
-          onClick={() => setLoginMethod("email")}
-          className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            loginMethod === "email" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-800"
-          }`}
-        >
-          <Mail className="w-4 h-4" />
-          <span>Email</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setLoginMethod("phone")}
-          className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            loginMethod === "phone" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-800"
-          }`}
-        >
-          <Phone className="w-4 h-4" />
-          <span>Téléphone</span>
-        </button>
-      </div>
-
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Email or Phone Input */}
+        {/* Email Input */}
         <div className="space-y-2">
-          <Label htmlFor={loginMethod}>{loginMethod === "email" ? "Adresse email" : "Numéro de téléphone"}</Label>
+          <Label htmlFor="email">Adresse email</Label>
           <Input
-            id={loginMethod}
-            type={loginMethod === "email" ? "email" : "tel"}
-            placeholder={loginMethod === "email" ? "votre@email.com" : "+243 123 456 789"}
-            value={loginMethod === "email" ? formData.email : formData.phone}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                [loginMethod]: e.target.value,
-              }))
-            }
+            id="email"
+            type="email"
+            placeholder="votre@email.com"
+            value={formData.email}
+            onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
             required
             className="border-blue-200 focus:border-blue-500"
           />
@@ -130,7 +99,6 @@ export function LoginForm() {
               value={formData.password}
               onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
               required
-              minLength={6}
               className="border-blue-200 focus:border-blue-500 pr-10"
             />
             <button
@@ -143,49 +111,11 @@ export function LoginForm() {
           </div>
         </div>
 
-        {/* Forgot Password */}
-        <div className="text-right">
-          <button type="button" className="text-sm text-blue-600 hover:text-blue-700">
-            Mot de passe oublié ?
-          </button>
-        </div>
-
         {/* Submit Button */}
         <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
           {isLoading ? "Connexion..." : "Se connecter"}
         </Button>
       </form>
-
-      {/* Social Login */}
-      <div className="space-y-4">
-        <div className="relative">
-          <Separator />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="bg-white px-2 text-sm text-gray-500">Ou continuer avec</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleSocialLogin("google")}
-            className="border-blue-200 hover:bg-blue-50"
-          >
-            <Chrome className="w-4 h-4 mr-2" />
-            Google
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleSocialLogin("facebook")}
-            className="border-blue-200 hover:bg-blue-50"
-          >
-            <div className="w-4 h-4 mr-2 bg-blue-600 rounded-sm"></div>
-            Facebook
-          </Button>
-        </div>
-      </div>
     </div>
   )
 }

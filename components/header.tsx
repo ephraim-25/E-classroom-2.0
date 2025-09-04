@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Menu, X, BookOpen } from "@/components/icons"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
@@ -42,16 +41,16 @@ export function Header() {
             </Link>
           </nav>
 
-          {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <LanguageSelector />
-            <Link href="/auth/login">
-              <Button variant="ghost" className="text-blue-600 hover:text-blue-700">
-                {t("nav.login")}
-              </Button>
+            <Link href="/auth/login" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+              {t("auth.login")}
             </Link>
-            <Link href="/auth/register">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">{t("nav.register")}</Button>
+            <Link
+              href="/auth/register"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              {t("auth.register")}
             </Link>
           </div>
 
@@ -81,19 +80,18 @@ export function Header() {
                 {t("nav.contact")}
               </Link>
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
+                <Link href="/auth/login" className="text-gray-700 hover:text-blue-600 font-medium px-2">
+                  {t("auth.login")}
+                </Link>
+                <Link
+                  href="/auth/register"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium mx-2 text-center"
+                >
+                  {t("auth.register")}
+                </Link>
                 <div className="px-2">
                   <LanguageSelector />
                 </div>
-                <Link href="/auth/login">
-                  <Button variant="ghost" className="text-blue-600 hover:text-blue-700 justify-start w-full">
-                    {t("nav.login")}
-                  </Button>
-                </Link>
-                <Link href="/auth/register">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white justify-start w-full">
-                    {t("nav.register")}
-                  </Button>
-                </Link>
               </div>
             </div>
           </div>

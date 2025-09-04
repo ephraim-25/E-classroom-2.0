@@ -3,21 +3,19 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Eye, EyeOff, Chrome, Mail, Phone } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { OTPVerification } from "./otp-verification"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Eye, EyeOff, AlertCircle } from "@/components/icons"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
 export function RegisterForm() {
-  const [step, setStep] = useState<"form" | "otp" | "complete">("form")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [verificationMethod, setVerificationMethod] = useState<"email" | "sms">("email")
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -29,143 +27,92 @@ export function RegisterForm() {
     acceptTerms: false,
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [verificationToken, setVerificationToken] = useState("")
-
-  const { register } = useAuth()
+  const [error, setError] = useState("")
+  const router = useRouter()
+  const supabase = createClientComponentClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
+    setError("")
 
+    // Validation
     if (formData.password !== formData.confirmPassword) {
-      alert("Les mots de passe ne correspondent pas")
+      setError("Les mots de passe ne correspondent pas")
+      setIsLoading(false)
       return
     }
 
     if (!formData.acceptTerms) {
-      alert("Veuillez accepter les conditions d'utilisation")
+      setError("Veuillez accepter les conditions d'utilisation")
+      setIsLoading(false)
       return
     }
 
-    setIsLoading(true)
+    if (formData.password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caractères")
+      setIsLoading(false)
+      return
+    }
 
     try {
-      const identifier = verificationMethod === "email" ? formData.email : formData.phone
-
-      const response = await fetch("/api/auth/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          identifier,
-          type: "register",
-          method: verificationMethod,
-        }),
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone: formData.phone,
+            user_type: formData.userType,
+          },
+        },
       })
 
-      const data = await response.json()
-
-      if (data.success) {
-        setStep("otp")
-      } else {
-        alert(data.error || "Erreur lors de l'envoi du code de vérification")
+      if (error) {
+        setError(error.message)
+        return
       }
-    } catch (error) {
-      console.error("Registration error:", error)
-      alert("Erreur de connexion. Veuillez réessayer.")
+
+      if (data.user) {
+        // Create profile in profiles table
+        const { error: profileError } = await supabase.from("profiles").insert({
+          id: data.user.id,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.userType,
+        })
+
+        if (profileError) {
+          console.error("Profile creation error:", profileError)
+        }
+
+        // Redirect to appropriate dashboard
+        if (formData.userType === "admin") {
+          router.push("/dashboard/admin")
+        } else if (formData.userType === "instructor") {
+          router.push("/dashboard/instructor")
+        } else {
+          router.push("/dashboard/student")
+        }
+      }
+    } catch (error: any) {
+      setError("Erreur lors de la création du compte")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleOTPVerified = async (token: string) => {
-    setVerificationToken(token)
-
-    try {
-      const response = await fetch("/api/auth/register-with-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          verificationToken: token,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        // Store auth token and redirect
-        localStorage.setItem("auth_token", data.token)
-        setStep("complete")
-
-        // Redirect after a short delay
-        setTimeout(() => {
-          window.location.href = `/dashboard/${data.user.userType}`
-        }, 2000)
-      } else {
-        alert(data.error || "Erreur lors de la création du compte")
-        setStep("form")
-      }
-    } catch (error) {
-      console.error("Registration completion error:", error)
-      alert("Erreur lors de la finalisation de l'inscription")
-      setStep("form")
-    }
-  }
-
-  const handleSocialLogin = (provider: "google" | "facebook") => {
-    console.log(`Register with ${provider}`)
-  }
-
-  if (step === "otp") {
-    const identifier = verificationMethod === "email" ? formData.email : formData.phone
-    return (
-      <OTPVerification
-        identifier={identifier}
-        method={verificationMethod}
-        type="register"
-        onVerified={handleOTPVerified}
-        onBack={() => setStep("form")}
-      />
-    )
-  }
-
-  if (step === "complete") {
-    return (
-      <div className="text-center space-y-4 py-8">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h3 className="text-xl font-semibold text-green-600">Compte créé avec succès !</h3>
-        <p className="text-gray-600">Redirection vers votre tableau de bord...</p>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex bg-gray-100 rounded-lg p-1">
-        <button
-          type="button"
-          onClick={() => setVerificationMethod("email")}
-          className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            verificationMethod === "email" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-800"
-          }`}
-        >
-          <Mail className="w-4 h-4" />
-          <span>Vérifier par Email</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setVerificationMethod("sms")}
-          className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            verificationMethod === "sms" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-800"
-          }`}
-        >
-          <Phone className="w-4 h-4" />
-          <span>Vérifier par SMS</span>
-        </button>
-      </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name Fields */}
@@ -247,11 +194,11 @@ export function RegisterForm() {
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Minimum 8 caractères"
+              placeholder="Minimum 6 caractères"
               value={formData.password}
               onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
               required
-              minLength={8}
+              minLength={6}
               className="border-blue-200 focus:border-blue-500 pr-10"
             />
             <button
@@ -295,53 +242,15 @@ export function RegisterForm() {
             onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, acceptTerms: checked as boolean }))}
           />
           <Label htmlFor="terms" className="text-sm text-gray-600">
-            J'accepte les{" "}
-            <button type="button" className="text-blue-600 hover:text-blue-700">
-              conditions d'utilisation
-            </button>{" "}
-            et la{" "}
-            <button type="button" className="text-blue-600 hover:text-blue-700">
-              politique de confidentialité
-            </button>
+            J'accepte les conditions d'utilisation et la politique de confidentialité
           </Label>
         </div>
 
         {/* Submit Button */}
         <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
-          {isLoading ? "Envoi du code..." : `Continuer avec ${verificationMethod === "email" ? "Email" : "SMS"}`}
+          {isLoading ? "Création du compte..." : "Créer mon compte"}
         </Button>
       </form>
-
-      {/* Social Login */}
-      <div className="space-y-4">
-        <div className="relative">
-          <Separator />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="bg-white px-2 text-sm text-gray-500">Ou s'inscrire avec</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleSocialLogin("google")}
-            className="border-blue-200 hover:bg-blue-50"
-          >
-            <Chrome className="w-4 h-4 mr-2" />
-            Google
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleSocialLogin("facebook")}
-            className="border-blue-200 hover:bg-blue-50"
-          >
-            <div className="w-4 h-4 mr-2 bg-blue-600 rounded-sm"></div>
-            Facebook
-          </Button>
-        </div>
-      </div>
     </div>
   )
 }
