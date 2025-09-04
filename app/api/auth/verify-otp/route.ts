@@ -7,107 +7,72 @@ export async function POST(request: NextRequest) {
   try {
     const { identifier, otp, type } = await request.json()
 
-    // Validate input
     if (!identifier || !otp || !type) {
-      return NextResponse.json({ error: "Identifiant, code OTP et type requis" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Identifiant, code OTP et type requis",
+        },
+        { status: 400 },
+      )
     }
 
-    const storedOTP = await getStoredOTP(identifier, type)
+    let verifyResponse
 
-    if (!storedOTP) {
-      return NextResponse.json({ error: "Code de vérification non trouvé ou expiré" }, { status: 400 })
+    // Determine if identifier is email or phone
+    const isEmail = identifier.includes("@")
+
+    if (isEmail) {
+      verifyResponse = await supabase.auth.verifyOtp({
+        email: identifier,
+        token: otp,
+        type: type === "signup" ? "signup" : "email",
+      })
+    } else {
+      verifyResponse = await supabase.auth.verifyOtp({
+        phone: identifier,
+        token: otp,
+        type: type === "signup" ? "signup" : "sms",
+      })
     }
 
-    // Check if OTP is expired
-    if (new Date() > new Date(storedOTP.expires_at)) {
-      await deleteOTP(identifier, type)
-      return NextResponse.json({ error: "Code de vérification expiré" }, { status: 400 })
+    if (verifyResponse.error) {
+      console.error("Supabase verify OTP error:", verifyResponse.error)
+      return NextResponse.json(
+        {
+          success: false,
+          error: verifyResponse.error.message,
+        },
+        { status: 400 },
+      )
     }
 
-    // Check attempts limit
-    if (storedOTP.attempts >= 3) {
-      return NextResponse.json({ error: "Trop de tentatives. Demandez un nouveau code." }, { status: 429 })
+    if (type === "signup" && verifyResponse.data.user) {
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: verifyResponse.data.user.id,
+        role: "student", // Default role
+        created_at: new Date().toISOString(),
+      })
+
+      if (profileError) {
+        console.error("Profile creation error:", profileError)
+        // Don't fail the verification if profile creation fails
+      }
     }
-
-    // Verify OTP
-    if (storedOTP.otp_code !== otp) {
-      // Increment attempts
-      await incrementOTPAttempts(identifier, type)
-      return NextResponse.json({ error: "Code de vérification incorrect" }, { status: 400 })
-    }
-
-    await markOTPAsVerified(identifier, type)
-    await deleteOTP(identifier, type)
-
-    // Generate verification token for next step
-    const verificationToken = generateVerificationToken(identifier, type)
 
     return NextResponse.json({
       success: true,
-      message: "Code de vérification validé avec succès",
-      verificationToken,
-      type,
+      verificationToken: verifyResponse.data.session?.access_token || null,
+      user: verifyResponse.data.user,
     })
   } catch (error) {
     console.error("Verify OTP error:", error)
-    return NextResponse.json({ error: "Erreur lors de la vérification du code" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Erreur lors de la vérification du code",
+      },
+      { status: 500 },
+    )
   }
-}
-
-async function getStoredOTP(identifier: string, type: string) {
-  const { data, error } = await supabase
-    .from("otp_codes")
-    .select("*")
-    .eq("identifier", identifier)
-    .eq("type", type)
-    .eq("verified", false)
-    .single()
-
-  if (error) {
-    console.error("Get OTP error:", error)
-    return null
-  }
-
-  return data
-}
-
-async function incrementOTPAttempts(identifier: string, type: string) {
-  console.log(`[v0] Incrementing OTP attempts for ${identifier}`)
-
-  const { error } = await supabase
-    .from("otp_codes")
-    .update({ attempts: supabase.raw("attempts + 1") })
-    .eq("identifier", identifier)
-    .eq("type", type)
-
-  if (error) {
-    console.error("Increment attempts error:", error)
-  }
-}
-
-async function markOTPAsVerified(identifier: string, type: string) {
-  console.log(`[v0] Marking OTP as verified for ${identifier}`)
-
-  const { error } = await supabase
-    .from("otp_codes")
-    .update({ verified: true })
-    .eq("identifier", identifier)
-    .eq("type", type)
-
-  if (error) {
-    console.error("Mark verified error:", error)
-  }
-}
-
-async function deleteOTP(identifier: string, type: string) {
-  const { error } = await supabase.from("otp_codes").delete().eq("identifier", identifier).eq("type", type)
-
-  if (error) {
-    console.error("Delete OTP error:", error)
-  }
-}
-
-function generateVerificationToken(identifier: string, type: string): string {
-  // Simple token generation - in production use JWT or similar
-  return Buffer.from(`${identifier}:${type}:${Date.now()}`).toString("base64")
 }
