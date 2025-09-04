@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import Link from "next/link"
 import {
   BookOpen,
   Clock,
@@ -23,20 +23,25 @@ import {
   BarChart3,
   Target,
   RefreshCw,
-} from "lucide-react"
-import Link from "next/link"
+} from "@/components/icons"
 
 export function StudentDashboard() {
-  const { user, logout } = useAuth()
   const [activeTab, setActiveTab] = useState("overview")
   const [searchQuery, setSearchQuery] = useState("")
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
+    const token = localStorage.getItem("auth_token")
+    const userData = localStorage.getItem("user_data")
+
+    if (token && userData) {
+      setUser(JSON.parse(userData))
+    }
+
     const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem("auth_token")
         if (!token) return
 
         const response = await fetch("/api/dashboard/student", {
@@ -56,12 +61,32 @@ export function StudentDashboard() {
       }
     }
 
-    if (user) {
+    if (token) {
       fetchDashboardData()
+    } else {
+      setIsLoading(false)
     }
-  }, [user])
+  }, [])
 
-  if (!user) return null
+  const logout = () => {
+    localStorage.removeItem("auth_token")
+    localStorage.removeItem("user_data")
+    window.location.href = "/"
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Accès non autorisé</h2>
+          <p className="text-gray-600 mb-4">Veuillez vous connecter pour accéder à votre tableau de bord.</p>
+          <Link href="/auth/login">
+            <Button className="bg-blue-600 hover:bg-blue-700">Se connecter</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

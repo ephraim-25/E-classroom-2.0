@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, Smartphone, Shield, ArrowLeft, Lock, CheckCircle } from "lucide-react"
+import { CreditCard, Smartphone, Shield, ArrowLeft, Lock, CheckCircle } from "@/components/icons"
 
 export default function CheckoutPage() {
   const router = useRouter()
