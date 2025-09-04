@@ -5,7 +5,6 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Re-export everything from client and server for compatibility
 export * from "./supabase/client"
-export * from "./supabase/server"
 export * from "./supabase/auth"
+// Removed server export to prevent next/headers import in client components
