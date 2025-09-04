@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, AlertCircle } from "@/components/icons"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false)
@@ -29,7 +28,6 @@ export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
-  const supabase = createClientComponentClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,49 +54,44 @@ export function RegisterForm() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone,
-            user_type: formData.userType,
-          },
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          userType: formData.userType,
+        }),
       })
 
-      if (error) {
-        setError(error.message)
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Erreur lors de la création du compte")
         return
       }
 
-      if (data.user) {
-        // Create profile in profiles table
-        const { error: profileError } = await supabase.from("profiles").insert({
-          id: data.user.id,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          role: formData.userType,
-        })
+      if (data.success) {
+        // Store token in localStorage
+        localStorage.setItem("auth_token", data.token)
+        localStorage.setItem("user", JSON.stringify(data.user))
 
-        if (profileError) {
-          console.error("Profile creation error:", profileError)
-        }
-
-        // Redirect to appropriate dashboard
-        if (formData.userType === "admin") {
+        // Redirect to appropriate dashboard based on user role
+        if (data.user.role === "admin") {
           router.push("/dashboard/admin")
-        } else if (formData.userType === "instructor") {
+        } else if (data.user.role === "instructor") {
           router.push("/dashboard/instructor")
         } else {
           router.push("/dashboard/student")
         }
       }
     } catch (error: any) {
+      console.error("Registration error:", error)
       setError("Erreur lors de la création du compte")
     } finally {
       setIsLoading(false)
