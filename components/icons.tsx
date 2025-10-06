@@ -38,7 +38,7 @@ export const Award = ({ className = "w-6 h-6", ...props }) => (
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={2}
-      d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+      d="M9 12l2 2 4-4m7.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
     />
   </svg>
 )
@@ -168,5 +168,103 @@ export const Globe = ({ className = "w-6 h-6", ...props }) => (
 export const Quote = ({ className = "w-6 h-6", ...props }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24" {...props}>
     <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+  </svg>
+)
+
+export const Shield = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+    />
+  </svg>
+)
+
+export const ArrowLeft = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+  </svg>
+)
+
+export const Lock = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" strokeWidth={2} />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" strokeWidth={2} />
+  </svg>
+)
+
+export const CheckCircle = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
+  </svg>
+)
+
+export const Clock = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <circle cx="12" cy="12" r="10" strokeWidth={2} />
+    <polyline points="12 6 12 12 16 14" strokeWidth={2} />
+  </svg>
+)
+
+export const Play = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24" {...props}>
+    <polygon points="5 3 19 12 5 21 5 3" />
+  </svg>
+)
+
+export const Filter = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" strokeWidth={2} />
+  </svg>
+)
+
+export const Calendar = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" strokeWidth={2} />
+    <line x1="16" y1="2" x2="16" y2="6" strokeWidth={2} />
+    <line x1="8" y1="2" x2="8" y2="6" strokeWidth={2} />
+    <line x1="3" y1="10" x2="21" y2="10" strokeWidth={2} />
+  </svg>
+)
+
+export const Heart = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+    />
+  </svg>
+)
+
+export const BarChart3 = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <line x1="18" y1="20" x2="18" y2="10" strokeWidth={2} />
+    <line x1="12" y1="20" x2="12" y2="4" strokeWidth={2} />
+    <line x1="6" y1="20" x2="6" y2="14" strokeWidth={2} />
+  </svg>
+)
+
+export const Target = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <circle cx="12" cy="12" r="10" strokeWidth={2} />
+    <circle cx="12" cy="12" r="6" strokeWidth={2} />
+    <circle cx="12" cy="12" r="2" strokeWidth={2} />
+  </svg>
+)
+
+export const RefreshCw = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <polyline points="23 4 23 10 17 10" strokeWidth={2} />
+    <polyline points="1 20 1 14 7 14" strokeWidth={2} />
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" strokeWidth={2} />
   </svg>
 )
