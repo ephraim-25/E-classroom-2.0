@@ -268,3 +268,95 @@ export const RefreshCw = ({ className = "w-6 h-6", ...props }) => (
     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" strokeWidth={2} />
   </svg>
 )
+
+export const CheckIcon = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <polyline points="20 6 9 17 4 12" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const ChevronDownIcon = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <polyline points="6 9 12 15 18 9" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const ChevronUpIcon = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <polyline points="18 15 12 9 6 15" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const ChevronRightIcon = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <polyline points="9 18 15 12 9 6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const ChevronLeftIcon = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <polyline points="15 18 9 12 15 6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const CircleIcon = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <circle cx="12" cy="12" r="10" strokeWidth={2} />
+  </svg>
+)
+
+export const XIcon = X // Alias for X component
+
+export const MinusIcon = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <line x1="5" y1="12" x2="19" y2="12" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const MoreHorizontal = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <circle cx="12" cy="12" r="1" fill="currentColor" />
+    <circle cx="19" cy="12" r="1" fill="currentColor" />
+    <circle cx="5" cy="12" r="1" fill="currentColor" />
+  </svg>
+)
+
+export const SearchIcon = Search // Alias for Search component
+
+export const GripVerticalIcon = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <circle cx="9" cy="5" r="1" fill="currentColor" />
+    <circle cx="9" cy="12" r="1" fill="currentColor" />
+    <circle cx="9" cy="19" r="1" fill="currentColor" />
+    <circle cx="15" cy="5" r="1" fill="currentColor" />
+    <circle cx="15" cy="12" r="1" fill="currentColor" />
+    <circle cx="15" cy="19" r="1" fill="currentColor" />
+  </svg>
+)
+
+export const PanelLeftIcon = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeWidth={2} />
+    <line x1="9" y1="3" x2="9" y2="21" strokeWidth={2} />
+  </svg>
+)
+
+export const Loader2Icon = ({ className = "w-4 h-4", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M21 12a9 9 0 1 1-6.219-8.56"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ animation: "spin 1s linear infinite" }}
+    />
+  </svg>
+)
+
+export const ArrowRight = ({ className = "w-6 h-6", ...props }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+  </svg>
+)
+
+export const Loader2 = Loader2Icon // Alias for Loader2Icon
